@@ -1,23 +1,26 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
-Find formulas for the 2x2x2 Rubik's cube
-"""
+Find algorithms for the 2x2x2 Rubik's cube.
 
-from functools import reduce
+License:
+    MIT License
+"""
 import argparse
 import copy
 import re
 import sys
+from functools import reduce
 
 
-def error(msg):
-    print('Error: ' + msg, file = sys.stderr)
-    exit(-1)
+def error_and_exit(msg):
+    print('Error: ' + msg, file=sys.stderr)
+    sys.exit(-1)
 
 
 class CornerPosition:
     """Corner position"""
+
+    default_pivot = 'LDB'       # position: 0
 
     @staticmethod
     def is_valid_str(corner):
@@ -84,6 +87,17 @@ class Cube:
         orientation_is_zero = self.orientation() == 0
         return pivot_is_fixed and orientation_is_zero
 
+    def fixed_corners(self):
+        fixed_position = []
+        fixed_position_n_orientation = []
+        for idx in range(8):
+            if self.permutation[idx] == idx:
+                if self.orientations[idx] != 0:
+                    fixed_position.append(idx)
+                else:
+                    fixed_position_n_orientation.append(idx)
+        return fixed_position, fixed_position_n_orientation
+
     def __eq__(self, other):
         return self.permutation == other.permutation and self.orientations == other.orientations
 
@@ -91,9 +105,20 @@ class Cube:
         return not self == other
 
     @classmethod
-    def from_str(cls, cube_str: str):
+    def is_valid_str(cls, cube_str: str):
         lists = cube_str.split(cls.sep)
-        assert len(lists) == 2
+        if len(lists) != 2:
+            return False
+        if len(lists[0]) != 8 or set(lists[0]) != set('01234567'):
+            return False
+        if len(lists[1]) != 8 or len(set(lists[1]) - set('012')) != 0:
+            return False
+        return True
+
+    @classmethod
+    def from_str(cls, cube_str: str):
+        assert cls.is_valid_str(cube_str)
+        lists = cube_str.split(cls.sep)
         perm = list(map(int, list(lists[0])))
         orient = list(map(int, list(lists[1])))
         return cls(perm, orient)
@@ -103,16 +128,73 @@ class Cube:
         return cls([0, 1, 2, 3, 4, 5, 6, 7], [0, 0, 0, 0, 0, 0, 0, 0])
 
 
-#
-# Combine position + orientation to define all rotations on the cube
-#
-# As a convention (and to get rid of the symetries of the cube) we fix
-# the first corner in space (i.e. corner 0 is assumed to be already in
-# the 'solved' position.)
-# This means that we can limit the scope to only one rotation per axis,
-# namely a quarter turn on the face opposite to the fixed corner.
-#
+class CubePattern:
+    """CubePattern"""
+
+    sep = Cube.sep
+    wildcard = '*'
+
+    def __init__(self, permutation: list, orientations: list):
+        assert len(permutation) == 8
+        assert len(orientations) == 8
+        self.permutation = permutation
+        self.orientations = orientations
+
+    def __repr__(self):
+        return ''.join(self.permutation) + self.sep + ''.join(self.orientations)
+
+    def match(self, cube: Cube):
+        match_perm = all([pattern == self.wildcard or pattern == str(perm)
+                          for (perm, pattern) in zip(cube.permutation, self.permutation)])
+        match_orient = all([pattern == self.wildcard or pattern == str(orient)
+                            for (orient, pattern) in zip(cube.orientations, self.orientations)])
+        return match_perm and match_orient
+
+    def is_cube(self):
+        return self.wildcard not in self.permutation and self.wildcard not in self.orientations
+
+    def to_cube(self) -> Cube:
+        assert self.is_cube()
+        return Cube(list(map(int, self.permutation)), list(map(int, self.orientations)))
+
+    def is_solvable(self, pivot):
+        if self.is_cube():
+            return self.to_cube().is_solvable(pivot)
+        idx = CornerPosition.from_str(pivot)
+        pivot_is_fixed = (self.permutation[idx] in [str(idx), self.wildcard] and
+                          self.orientations[idx] in ['0', self.wildcard])
+        return pivot_is_fixed
+
+    @classmethod
+    def is_valid_str(cls, pattern_str: str):
+        lists = pattern_str.split(cls.sep)
+        if len(lists) != 2:
+            return False
+        if len(lists[0]) != 8 or len(set(lists[0]) - set('01234567' + cls.wildcard)) != 0:
+            return False
+        if len(lists[1]) != 8 or len(set(lists[1]) - set('012' + cls.wildcard)) != 0:
+            return False
+        return True
+
+    @classmethod
+    def from_str(cls, pattern_str: str):
+        assert cls.is_valid_str(pattern_str)
+        lists = pattern_str.split(cls.sep)
+        perm =  list(lists[0])
+        orient = list(lists[1])
+        return cls(perm, orient)
+
+
 class Rot:
+    """Combine position + orientation to define a rotation of the cube
+
+    As a convention (and to get rid of the symetries of the cube) we fix
+    the first corner in space (i.e. corner 0 is assumed to be already in
+    the 'solved' position.)
+    This means that we can limit the scope to only one rotation per axis,
+    namely a quarter turn on the face opposite to the fixed corner.
+    """
+
     def __init__(self, permutation: list, orientations: list, axis: str, name: str):
         self.cube = Cube(permutation, orientations)
         self.axis = axis.upper()
@@ -130,12 +212,13 @@ class Rot:
     def to_string(self, nb_of_quarter_turns = 1):
         if nb_of_quarter_turns % 4 == 1:
             return self.name
-        elif nb_of_quarter_turns % 4 == 2:
+        if nb_of_quarter_turns % 4 == 2:
             return self.name + '2'
-        elif nb_of_quarter_turns % 4 == 3:
+        if nb_of_quarter_turns % 4 == 3:
             return self.name + '\''
-        else:
-            return "I"      # No rotation
+        # No rotation (This is the identity transformation)
+        assert nb_of_quarter_turns % 4 == 0
+        return "I"
 
     def __repr__(self):
         return self.to_string()
@@ -193,8 +276,9 @@ class Rotation:
             rot = rot[:-1]
             cw_quarter_turns = 3
         if rot not in Rotation.All:
-            raise Exception('Rotation not found [%s]' % rot)
+            raise Exception(f'Rotation not found [{rot}]')
         return Rotation.All[rot], cw_quarter_turns
+
 
 class Algorithm:
     """An algorithm is a list of rotations applied to the cube"""
@@ -214,6 +298,16 @@ class Algorithm:
             for _ in range(n):
                 result_cube = r.apply(result_cube)
         return result_cube
+
+    def order(self):
+        order = 0
+        cube = Cube.solved()
+        while True:
+            order = order + 1
+            cube = self.apply(cube)
+            if  cube == Cube.solved():
+                break
+        return order
 
     def __len__(self):
         assert len(self.rotations) == len(self.clockwise_quarter_turns)
@@ -242,6 +336,10 @@ class Algorithm:
 
 
 def rotations_from_pivot(pivot: str):
+    """List the allowed base rotations for this pivot corner
+
+    E.g. if the pivot is LUF, then only the rotations R, D and B can be used
+    """
     assert CornerPosition.is_valid_str(pivot)
     rotations = []
     rotations.append(Rotation.R if 'L' in pivot else Rotation.L)
@@ -251,14 +349,20 @@ def rotations_from_pivot(pivot: str):
 
 
 class ExploreSolutions:
+    """Recursively explore the graph of the cube confugurations
+
+    The search is DFS to not explode the RAM consumption, with a cap on the maximum search depth.
+
+    When incrementing the search depth (by adding a new rotation to the algorithm):
+     - Do not rotate on the same axis as the caller
+     - Check clockwise, counter-clockwise, half-turn on the two remaining axis
+    """
     def __init__(self, allowed_rotations, result_found_predicate, on_result_found):
         self.allowed_rotations = allowed_rotations
         self.result_found_predicate = result_found_predicate
         self.on_result_found = on_result_found
 
-    # - Do not rotate on the same axis as the caller
-    # - Check clockwise, counter-clockwise, half-turn on the two remaining axis
-    def recurse_exploration(self, max_depth, state: Cube = Cube.solved(), previous_rots: Algorithm = Algorithm()):
+    def recursive_dfs_exploration(self, max_depth, state: Cube = Cube.solved(), previous_rots: Algorithm = Algorithm()):
         found = False
         for rot in self.allowed_rotations:
             if len(previous_rots) > 0 and previous_rots.rotations[-1].axis == rot.axis:
@@ -268,15 +372,15 @@ class ExploreSolutions:
                 new_state = rot.apply(new_state)
                 new_rots = copy.copy(previous_rots)
                 new_rots.append(rot, n + 1)
-                if (self.result_found_predicate(new_state)):
+                if self.result_found_predicate(new_state):
                     self.on_result_found(new_state, new_rots)
                     found = True
                 elif len(new_rots) < max_depth:
-                    found = found | self.recurse_exploration(max_depth, new_state, new_rots)
+                    found = found | self.recursive_dfs_exploration(max_depth, new_state, new_rots)
         return found
 
 
-def funny_tip(depth):
+def funny_hint(depth):
     return {
         7: 'Not just yet!',
         9: 'Go make a coffee...',
@@ -289,41 +393,58 @@ def funny_tip(depth):
 # Main
 #
 def main():
-    parser = argparse.ArgumentParser(description='Explore the 2x2x2 Rubik\'s cube')
-    parser.add_argument('--max', dest='max', type=int, help='Max search depth', required=False, default=8)
-    parser.add_argument('-c', '--cube', dest='target_cube',  help='Target configuration of the cube', required=False, default = str(Cube.solved()))
-    default_pivot = 'LDB'
-    parser.add_argument('-p', '--pivot', dest='pivot_corner', help='Pivot corner. Default=' + default_pivot, required=False, default = default_pivot)
-    parser.add_argument('-a', '--algo', dest='algorithm', help='An algorithm. For example: R U2 R\'', required=False, default = None)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--doc', dest='documentation', action='store_true',
+                        help='Additional documentation')
+    parser.add_argument('--max', dest='max', type=int, required=False, default=10,
+                        help='Max search depth')
+    parser.add_argument('--maxmax', dest='goto_max_depth', action='store_true',
+                        help='Go to max search depth.')
+    parser.add_argument('-c', '--cube', dest='cube', required=False, default = str(Cube.solved()),
+                        help='A configuration of the cube')
+    parser.add_argument('-p', '--pivot', dest='pivot_corner', required=False, default = CornerPosition.default_pivot,
+                        help='Pivot corner. Default=' + CornerPosition.default_pivot)
+    parser.add_argument('-a', '--algo', dest='algorithm', required=False, default = None,
+                        help='Apply an algorithm to the cube. For example: "R U2 R\'"')
     args = parser.parse_args()
 
-    if args.algorithm is not None:
+    if args.algorithm:
         algo = Algorithm.from_str(args.algorithm)
-        print(algo.apply())
+        starting_cube = Cube.from_str(args.cube)
+        cube = algo.apply(starting_cube)
+        print(cube)
+        fixed_corners = ['-'] * 8
+        fixed_position, fixed_position_n_orientation = cube.fixed_corners()
+        for idx in fixed_position:
+            fixed_corners[idx] = '~'
+        for idx in fixed_position_n_orientation:
+            fixed_corners[idx] = '+'
+        print(''.join(fixed_corners))
+        print(f'order: {algo.order()}')
         return
 
-    target_cube = Cube.from_str(args.target_cube)
+    target_pattern = CubePattern.from_str(args.cube)
     pivot = args.pivot_corner
 
     if not CornerPosition.is_valid_str(pivot):
-        error('Invalid pivot [%s]. Pivot must follow this format: (L|R)(D|U)(B|F)' % pivot)
-    if not target_cube.is_solvable(pivot):
-        error('The target position [%s] cannot be obtained with pivot %s (%d)' % (target_cube, pivot, CornerPosition.from_str(pivot)))
+        error_and_exit(f'Invalid pivot [{pivot}]. Pivot must follow this format: (L|R)(D|U)(B|F)' % pivot)
+    if not target_pattern.is_solvable(pivot):
+        error_and_exit(f'The target pattern [{target_pattern}] cannot be obtained with pivot {pivot} ({CornerPosition.from_str(pivot)})')
 
     allowed_rotations = rotations_from_pivot(args.pivot_corner)
 
     def found_predicate(cube: Cube):
-        return cube == target_cube
+        return target_pattern.match(cube)
 
     def process_solution(state: Cube, rotations: Algorithm):
-        print('%s %d [ %s ]' % (state, len(rotations), str(rotations)), flush=True)
+        print(f'{state} {len(rotations)} [ {str(rotations)} ]', flush=True)
 
     explore_solutions = ExploreSolutions(allowed_rotations, found_predicate, process_solution)
     found = False
     depth = 1
-    while not found and depth <= args.max:
-        print('Recurse depth: %d %s' % (depth, funny_tip(depth)), flush=True)
-        found = explore_solutions.recurse_exploration(depth)
+    while (args.goto_max_depth or not found) and depth <= args.max:
+        print(f'Recurse depth: {depth} {funny_hint(depth)}', flush=True)
+        found = explore_solutions.recursive_dfs_exploration(depth)
         depth = depth + 1
 
 

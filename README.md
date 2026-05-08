@@ -1,10 +1,27 @@
-Algorithm Finder for the 2x2x2 Rubik's Cube 2x2x2
-=================================================
+Algorithm Finder for the 2x2x2 Rubik's Cube
+===========================================
 
-![Python3](http://img.shields.io/badge/python-3.9-blue.svg?v=1)
+![Python3](http://img.shields.io/badge/python-3.13-blue.svg?v=1)
 [![License](http://img.shields.io/:license-mit-blue.svg?style=flat-square)](./LICENSE)
 
 ## Usage
+
+```
+$ python rubik2x2.py -h
+usage: rubik2x2.py [-h] [--doc] [--max MAX] [--maxmax] [-c CUBE] [-p PIVOT_CORNER] [-a ALGORITHM]
+
+Find algorithms for the 2x2x2 Rubik's cube. License: MIT License
+
+options:
+  -h, --help            show this help message and exit
+  --doc                 Additional documentation
+  --max MAX             Max search depth
+  --maxmax              Go to max search depth.
+  -c, --cube CUBE       A configuration of the cube
+  -p, --pivot PIVOT_CORNER
+                        Pivot corner. Default=LDB
+  -a, --algo ALGORITHM  Apply an algorithm to the cube. For example: "R U2 R'"
+```
 
 ## Requirements
 
@@ -15,3 +32,9 @@ Algorithm Finder for the 2x2x2 Rubik's Cube 2x2x2
 ```
 python -m unittest -v
 ```
+
+## God's number
+
+To this repo we annexed a C++ program that finds the [God's number](https://en.wikipedia.org/wiki/God%27s_algorithm) of the 2x2x2 Rubik's cube.
+
+Please read: [cpp/README.md](cpp/README.md)

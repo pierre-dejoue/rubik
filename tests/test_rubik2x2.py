@@ -1,9 +1,13 @@
+"""
+Unit tests of the rubik2x2 module
+"""
 import unittest
 
 from rubik2x2 import Rotation
 
 
 class TestRotation(unittest.TestCase):
+    """Test the Rotation class"""
     def test_base_rotations_are_valid(self):
         self.assertTrue(Rotation.L.is_valid())
         self.assertTrue(Rotation.R.is_valid())
