@@ -1,0 +1,20 @@
+cmake_minimum_required(VERSION 3.28)
+
+project(god_rubik2x2)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+set(SOURCES
+    src/cube.cpp
+    src/main.cpp
+)
+
+file(GLOB HEADERS src/*.h)
+
+add_executable(god_rubik2x2 ${SOURCES} ${HEADERS})
