@@ -1,0 +1,33 @@
+name: C++ Build
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ ubuntu, macos, windows ]
+        build_type: [ Debug, Release ]
+        arch: [ x86_64, arm64 ]
+        exclude:
+          - os: ubuntu
+            arch: arm64
+          - os: windows
+            arch: arm64
+
+    runs-on: ${{ matrix.os }}-latest
+
+    env:
+      CMAKE_CONFIG_EXTRA: ${{ matrix.os == 'macos' && format('-DCMAKE_OSX_ARCHITECTURES={0}', matrix.arch) || '' }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Configure CMake
+      working-directory: ${{ github.workspace }}/cpp
+      run: cmake -B ${{ github.workspace }}/cpp/build -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ${{ env.CMAKE_CONFIG_EXTRA }}
+
+    - name: Build
+      working-directory: ${{ github.workspace }}/cpp/build
+      run: cmake --build . --config ${{ matrix.build_type }}
