@@ -23,14 +23,26 @@ options:
   -a, --algo ALGORITHM  Apply an algorithm to the cube. For example: "R U2 R'"
 ```
 
-## Requirements
+## Maintenance
+
+### Requirements
 
 * __Python 3.x__: http://www.python.org/download/
 
-## Unit Tests
+No `requirements.txt` at the moment.
+
+### Unit Tests
 
 ```
 python -m unittest -v
+```
+
+### Static Checks
+
+```
+pylint  $(git ls-files '*.py')
+ruff check
+mypy .
 ```
 
 ## God's number
@@ -38,3 +50,5 @@ python -m unittest -v
 To this repo we annexed a C++ program that finds the [God's number](https://en.wikipedia.org/wiki/God%27s_algorithm) of the 2x2x2 Rubik's cube.
 
 Please read: [cpp/README.md](cpp/README.md)
+
+The convention used to describe a transformation of the cube (position and orientation of the corners) in the C++ project is the same as in the Python script.

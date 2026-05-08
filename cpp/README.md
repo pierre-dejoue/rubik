@@ -3,6 +3,9 @@ Find the God's number of the 2x2x2 Rubik's cube
 
 Definition of the [God's number](https://en.wikipedia.org/wiki/God%27s_algorithm).
 
+The convention used to describe a transformation of the cube (position and orientation of all corners) is the same as the one used in the Python script
+in this repo. You can refer the the documentation of that script.
+
 ## Build
 
 ```
