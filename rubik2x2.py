@@ -6,6 +6,7 @@ License:
     MIT License
 """
 import argparse
+import configparser
 import copy
 import re
 import sys
@@ -13,8 +14,25 @@ from functools import reduce
 from types import SimpleNamespace
 
 
+DEFAULT_CONFIG_FILE = 'config.ini'
+
 ADDITIONAL_DOCUMENTATION = './doc/cube_static_notation.md'
 
+ALL_FACES = ['R', 'L', 'U', 'D', 'F', 'B']
+
+CORNERS_IN_ORDER = [
+    'LDB',
+    'RDB',
+    'RUB',
+    'LUB',
+    'LDF',
+    'RDF',
+    'RUF',
+    'LUF',
+]
+
+config = configparser.ConfigParser()
+config.read(DEFAULT_CONFIG_FILE)
 
 def error_and_exit(msg):
     print('Error: ' + msg, file=sys.stderr)
@@ -43,23 +61,19 @@ class CornerPosition:
     default_pivot = 'LDB'       # position: 0
 
     @staticmethod
-    def is_valid_string(corner):
+    def is_valid_string(corner: str) -> bool:
         return re.match('^(L|R)(D|U)(B|F)$', corner) is not None
 
     @staticmethod
-    def from_string(corner):
+    def from_string(corner: str) -> int:
         assert CornerPosition.is_valid_string(corner)
-        pos = {
-            'LDB': 0,
-            'RDB': 1,
-            'RUB': 2,
-            'LUB': 3,
-            'LDF': 4,
-            'RDF': 5,
-            'RUF': 6,
-            'LUF': 7,
-        }.get(corner.upper(), 0)
+        pos = CORNERS_IN_ORDER.index(corner.upper())
         return pos
+
+    @staticmethod
+    def to_string(pos: int):
+        assert pos >= 0 and pos < 8
+        return CORNERS_IN_ORDER[pos]
 
 
 class CornerOrientation:
@@ -456,6 +470,24 @@ def funny_hint(depth: int) -> str:
     }.get(depth, '')
 
 
+def get_face_colors_from_config() -> dict[str, str]:
+    colors = {}
+    colors['R'] = config.get('colors', 'face_R', fallback='')
+    colors['L'] = config.get('colors', 'face_L', fallback='')
+    colors['U'] = config.get('colors', 'face_U', fallback='')
+    colors['D'] = config.get('colors', 'face_D', fallback='')
+    colors['F'] = config.get('colors', 'face_F', fallback='')
+    colors['B'] = config.get('colors', 'face_B', fallback='')
+    if not all(colors.values()) or len(set(colors.values())) != 6:
+        return {}
+    return colors
+
+
+def corner_to_colors(corner: str, colors: dict[str, str]):
+    assert CornerPosition.is_valid_string(corner)
+    return f'{colors[corner[0]]}-{colors[corner[1]]}-{colors[corner[2]]}'
+
+
 #
 # Main
 #
@@ -463,6 +495,8 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--doc', dest='documentation', action='store_true',
                         help='Additional documentation')
+    parser.add_argument('--show-colors', dest='show_colors', action='store_true',
+                        help='Show the association of faces to colors then exit')
     parser.add_argument('--max', dest='max', type=int, required=False, default=10,
                         help='Max search depth')
     parser.add_argument('--maxmax', dest='goto_max_depth', action='store_true',
@@ -475,17 +509,32 @@ def main():
                         help='Apply an algorithm to the cube. For example: "R U2 R\'"')
     args = parser.parse_args()
 
+    indent = 4*' '
     if args.documentation:
         try:
             doc_filepath = ADDITIONAL_DOCUMENTATION
-            indent = 4*' '
             with open(doc_filepath, 'r') as fp:
-                print('\n\n')
+                print('\n')
                 for line in fp:
                     print(f'{indent}{line.strip()}')
-                print('\n\n')
+                print('\n')
         except FileNotFoundError:
             error_and_exit(f'The documentation file was not found: {doc_filepath}')
+        return
+
+    face_colors = get_face_colors_from_config()
+    if args.show_colors:
+        if face_colors:
+            print()
+            print('Faces:')
+            for face in ALL_FACES:
+                print(f'{indent}{face}: {face_colors[face]}')
+            print()
+            print('Corners:')
+            for idx, corner in enumerate(CORNERS_IN_ORDER):
+                print(f'{indent}{idx} ({corner}): {corner_to_colors(corner, face_colors)}')
+        else:
+            print(f'No color configuration found, check {DEFAULT_CONFIG_FILE}')
         return
 
     if args.algorithm is not None:      # Empty string: The transformation is the identity
@@ -506,8 +555,11 @@ def main():
     target_pattern = CubePattern.from_string(args.cube)
     pivot = args.pivot_corner
     if not CornerPosition.is_valid_string(pivot):
-        error_and_exit(f'Invalid pivot [{pivot}]. Pivot must follow this format: (L|R)(D|U)(B|F)' % pivot)
-    print(f'Pivot: {pivot} ({CornerPosition.from_string(pivot)})')
+        error_and_exit(f'Invalid pivot [{pivot}]. Pivot must follow this format: (L|R)(D|U)(B|F)')
+    pivot_str = f'{pivot} ({CornerPosition.from_string(pivot)})'
+    if face_colors:
+        pivot_str += f' {corner_to_colors(pivot, face_colors)}'
+    print(f'Pivot: {pivot_str}')
 
     if not target_pattern.is_solvable(pivot):
         error_and_exit(f'The target pattern [{target_pattern}] cannot be obtained with pivot {pivot} ({CornerPosition.from_string(pivot)})')

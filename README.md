@@ -64,6 +64,35 @@ The script is using a custom notation to capture any position of the cube (inclu
 
 This notation is documented [here](./doc/cube_static_notation.md).
 
+## Color Scheme
+
+An optional `config.ini` can be provided to set a color scheme.
+
+Examples of config files are given for the most common color schemes: [./config/config_japanese.ini](./config/config_japanese.ini),  [./config/config_western.ini](./config/config_western.ini)
+
+Option `--show-colors` of the script prints out the current color scheme:
+
+```
+$ python rubik2x2.py --show-colors
+
+Faces:
+    R: red
+    L: orange
+    U: white
+    D: yellow
+    F: green
+    B: blue
+
+Corners:
+    0 (LDB): orange-yellow-blue
+    1 (RDB): red-yellow-blue
+    2 (RUB): red-white-blue
+    3 (LUB): orange-white-blue
+    4 (LDF): orange-yellow-green
+    5 (RDF): red-yellow-green
+    6 (RUF): red-white-green
+    7 (LUF): orange-white-green
+```
 
 ## Maintenance
 
