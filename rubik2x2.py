@@ -13,6 +13,9 @@ from functools import reduce
 from types import SimpleNamespace
 
 
+ADDITIONAL_DOCUMENTATION = './doc/cube_static_notation.md'
+
+
 def error_and_exit(msg):
     print('Error: ' + msg, file=sys.stderr)
     sys.exit(-1)
@@ -21,7 +24,7 @@ def error_and_exit(msg):
 class CornerPosition:
     """Corner position
 
-    The positions are defined as follow:
+    The positions are defined as follows:
 
     Back layer (B):
 
@@ -67,9 +70,9 @@ class CornerOrientation:
     or up (U) when the cube is in the solved state. Let's call that unique face the star
     face of the corner (*).
 
-      0: The star face is either up or down (it is on the XZ plane)
+      0: The star face is either up or down (it is aligned with the XZ plane)
       1: clockwise rotation from the 0 orientation
-      2: counterclockwiser rotation from the 0 orientation
+      2: counterclockwise rotation from the 0 orientation
     """
 
     @staticmethod
@@ -233,8 +236,8 @@ class Rot:
         return self.cube.orientation() == 0
 
     def apply(self, cube: Cube) -> Cube:
-        permutation = [self.cube.permutation[i] for i in cube.permutation]
-        orientations = [CornerOrientation.rotate(o, self.cube.orientations[i]) for (i, o) in cube]
+        permutation = [self.cube.permutation[p] for p in cube.permutation]
+        orientations = [CornerOrientation.rotate(o, self.cube.orientations[p]) for (p, o) in cube]
         return Cube(permutation, orientations)
 
     def __repr__(self):
@@ -471,6 +474,19 @@ def main():
     parser.add_argument('-a', '--algo', dest='algorithm', required=False, default=None,
                         help='Apply an algorithm to the cube. For example: "R U2 R\'"')
     args = parser.parse_args()
+
+    if args.documentation:
+        try:
+            doc_filepath = ADDITIONAL_DOCUMENTATION
+            indent = 4*' '
+            with open(doc_filepath, 'r') as fp:
+                print('\n\n')
+                for line in fp:
+                    print(f'{indent}{line.strip()}')
+                print('\n\n')
+        except FileNotFoundError:
+            error_and_exit(f'The documentation file was not found: {doc_filepath}')
+        return
 
     if args.algorithm is not None:      # Empty string: The transformation is the identity
         algo = Algorithm.from_string(args.algorithm)

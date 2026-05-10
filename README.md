@@ -23,6 +23,48 @@ options:
   -a, --algo ALGORITHM  Apply an algorithm to the cube. For example: "R U2 R'"
 ```
 
+## Tutorial
+
+### Notations
+
+#### Move Notation
+
+We're using the standard convention to name the cube faces and rotations. Those are sometimes refered to as the Singmaster notations. We provide a quick summary below:
+
+The six faces of the Rubik's cube are named:
+
+```
+L: Left
+R: Right
+U: Up
+D: Down
+F: Front
+B: Back
+```
+
+The following pairs of faces are aligned along the 3D axis:
+
+```
+L/R: X axis
+U/D: Y axis
+F/B: Z axis
+```
+
+The name of each face is also used to designate a clockwise quarter rotation of that face of the cube. The schema below illustrates this:
+
+![Rubik's cube move notation](doc/img/cube_rotations_2x2x2_xyz.png)
+
+This schema is adapted from the content of website [myrubik.com](https://myrubik.com/), shared under [CC BY-NC](https://creativecommons.org/licenses/by-nc/4.0/) license.
+
+Read more about the move Singmaster notation of the Rubik's cube on [myrubik.com -- The 2x2x2 cube pieces and notation](https://myrubik.com/en/notation/2x2x2), and [rubiks.fandom.com -- Notation](https://rubiks.fandom.com/wiki/Notation)
+
+#### Static Notation
+
+The script is using a custom notation to capture any position of the cube (including [illegal positions not reachable from the solved state](https://www.speedcubing.com/chris/legal.html))
+
+This notation is documented [here](./doc/cube_static_notation.md).
+
+
 ## Maintenance
 
 ### Requirements
