@@ -81,7 +81,7 @@ class CornerPosition:
 
     @staticmethod
     def to_string(pos: int):
-        assert pos >= 0 and pos < 8
+        assert 0 <= pos < 8
         return CORNERS_IN_ORDER[pos]
 
 
@@ -547,7 +547,7 @@ def main():
     if args.documentation:
         try:
             doc_filepath = ADDITIONAL_DOCUMENTATION
-            with open(doc_filepath, 'r') as fp:
+            with open(doc_filepath, 'r', encoding='utf-8') as fp:
                 print('\n')
                 for line in fp:
                     print(f'{indent}{line.strip()}')
@@ -613,7 +613,7 @@ def main():
             error_and_exit('Cannot solve a cube pattern, please provide a well-defined cube position as the target')
         solution_explorer = CubeSolver(allowed_rotations, process_solution, target_pattern.to_cube())
     else:
-        solution_explorer = ExploreSolutions(allowed_rotations, process_solution, lambda c : target_pattern.match(c))
+        solution_explorer = ExploreSolutions(allowed_rotations, process_solution, target_pattern.match)
 
     found = False
     depth = 1
