@@ -12,6 +12,7 @@ import re
 import sys
 from functools import reduce
 from types import SimpleNamespace
+from typing import override
 
 
 DEFAULT_CONFIG_FILE = 'config.ini'
@@ -34,9 +35,17 @@ CORNERS_IN_ORDER = [
 config = configparser.ConfigParser()
 config.read(DEFAULT_CONFIG_FILE)
 
+
 def error_and_exit(msg):
     print('Error: ' + msg, file=sys.stderr)
     sys.exit(-1)
+
+
+REPR_SEP = ':'
+def _get_static_repr_str(permutation: str, orientations: str) -> str:
+    assert len(permutation) == 8
+    assert len(orientations) == 8
+    return f'{permutation}{REPR_SEP}{orientations}'
 
 
 class CornerPosition:
@@ -107,8 +116,6 @@ class Cube:
     has been applied.
     """
 
-    sep = ':'
-
     def __init__(self, permutation: list, orientations: list):
         assert len(permutation) == 8
         assert set(permutation) == set(range(8))
@@ -117,7 +124,7 @@ class Cube:
         self.orientations = orientations
 
     def __repr__(self):
-        return ''.join(map(str, self.permutation)) + self.sep + ''.join(map(str, self.orientations))
+        return _get_static_repr_str(''.join(map(str, self.permutation)), ''.join(map(str, self.orientations)))
 
     def __iter__(self):
         return zip(self.permutation, self.orientations)
@@ -150,7 +157,7 @@ class Cube:
 
     @classmethod
     def is_valid_string(cls, cube_str: str) -> bool:
-        lists = cube_str.split(cls.sep)
+        lists = cube_str.split(REPR_SEP)
         if len(lists) != 2:
             return False
         if len(lists[0]) != 8 or set(lists[0]) != set('01234567'):
@@ -162,7 +169,7 @@ class Cube:
     @classmethod
     def from_string(cls, cube_str: str) -> 'Cube':
         assert cls.is_valid_string(cube_str)
-        lists = cube_str.split(cls.sep)
+        lists = cube_str.split(REPR_SEP)
         perm = list(map(int, list(lists[0])))
         orient = list(map(int, list(lists[1])))
         return cls(perm, orient)
@@ -171,11 +178,13 @@ class Cube:
     def solved(cls) -> 'Cube':
         return cls([0, 1, 2, 3, 4, 5, 6, 7], [0, 0, 0, 0, 0, 0, 0, 0])
 
+    def is_solved(self) -> bool:
+        return self.permutation == [0, 1, 2, 3, 4, 5, 6, 7] and all(o == 0 for o in self.orientations)
+
 
 class CubePattern:
     """Pattern that represents a family of cube transformations"""
 
-    sep = Cube.sep
     wildcard = '*'
 
     def __init__(self, permutation: list, orientations: list):
@@ -185,7 +194,7 @@ class CubePattern:
         self.orientations = orientations
 
     def __repr__(self):
-        return ''.join(self.permutation) + self.sep + ''.join(self.orientations)
+        return _get_static_repr_str(''.join(self.permutation), ''.join(self.orientations))
 
     def match(self, cube: Cube):
         match_perm = all(pattern == self.wildcard or pattern == str(perm)
@@ -216,7 +225,7 @@ class CubePattern:
 
     @classmethod
     def is_valid_string(cls, pattern_str: str) -> bool:
-        lists = pattern_str.split(cls.sep)
+        lists = pattern_str.split(REPR_SEP)
         if len(lists) != 2:
             return False
         if len(lists[0]) != 8 or len(set(lists[0]) - set('01234567' + cls.wildcard)) != 0:
@@ -228,8 +237,8 @@ class CubePattern:
     @classmethod
     def from_string(cls, pattern_str: str) -> 'CubePattern':
         assert cls.is_valid_string(pattern_str)
-        lists = pattern_str.split(cls.sep)
-        perm =  list(lists[0])
+        lists = pattern_str.split(REPR_SEP)
+        perm = list(lists[0])
         orient = list(lists[1])
         return cls(perm, orient)
 
@@ -393,7 +402,7 @@ class Algorithm:
         while True:
             order = order + 1
             cube = self.apply(cube)
-            if cube == Cube.solved():
+            if cube.is_solved():
                 break
         return order
 
@@ -444,17 +453,19 @@ class ExploreSolutions:
      - Do not rotate on the same axis as the caller
      - Check clockwise, counter-clockwise, half-turn on the two remaining axis
     """
-    def __init__(self, allowed_rotations, result_found_predicate, on_result_found):
+    def __init__(self, allowed_rotations, on_result_found, result_found_predicate):
         self.allowed_rotations = allowed_rotations
-        self.result_found_predicate = result_found_predicate
         self.on_result_found = on_result_found
+        self.result_found_predicate = result_found_predicate
 
-    def recursive_dfs_exploration(self, max_depth, state: Cube = Cube.solved(), previous_rots: Algorithm = Algorithm()):
+    def _recursive_dfs_exploration(self, max_depth: int, current_state: Cube, previous_rots: Algorithm | None = None) -> bool:
+        if previous_rots is None:
+            previous_rots = Algorithm()
         found = False
         for rot in self.allowed_rotations:
             if len(previous_rots) > 0 and previous_rots.rotations[-1].rot.axis == rot.axis:
                 continue
-            new_state = state
+            new_state = current_state
             for repeat in range(1, 4):
                 new_state = rot.apply(new_state)
                 new_rots = copy.copy(previous_rots)
@@ -463,8 +474,23 @@ class ExploreSolutions:
                     self.on_result_found(new_state, new_rots)
                     found = True
                 elif len(new_rots) < max_depth:
-                    found = found | self.recursive_dfs_exploration(max_depth, new_state, new_rots)
+                    found = found | self._recursive_dfs_exploration(max_depth, new_state, new_rots)
         return found
+
+    def dfs_exploration(self, max_depth: int) -> bool:
+        starting_state = Cube.solved()
+        return self._recursive_dfs_exploration(max_depth, starting_state)
+
+
+class CubeSolver(ExploreSolutions):
+    """Solve the cube from a given position"""
+    def __init__(self, allowed_rotations, on_result_found, target: Cube):
+        super().__init__(allowed_rotations, on_result_found, lambda c : c.is_solved())
+        self.target = target
+
+    @override
+    def dfs_exploration(self, max_depth: int) -> bool:
+        return self._recursive_dfs_exploration(max_depth, self.target)
 
 
 def funny_hint(depth: int) -> str:
@@ -503,6 +529,8 @@ def main():
                         help='Additional documentation')
     parser.add_argument('--show-colors', dest='show_colors', action='store_true',
                         help='Show the association of faces to colors then exit')
+    parser.add_argument('--solve', dest='solve', action='store_true',
+                        help='Solve the cube from the position given with -c/--cube')
     parser.add_argument('--max', dest='max', type=int, required=False, default=10,
                         help='Max search depth')
     parser.add_argument('--maxmax', dest='goto_max_depth', action='store_true',
@@ -558,7 +586,10 @@ def main():
         print(f'cyclic_order: {algo.cyclic_order()}')
         return
 
+    if not CubePattern.is_valid_string(args.cube):
+        error_and_exit(f'Invalid cube pattern: {args.cube}')
     target_pattern = CubePattern.from_string(args.cube)
+
     pivot = args.pivot_corner
     if not CornerPosition.is_valid_string(pivot):
         error_and_exit(f'Invalid pivot [{pivot}]. Pivot must follow this format: (L|R)(D|U)(B|F)')
@@ -574,18 +605,21 @@ def main():
 
     allowed_rotations = rotations_from_pivot(args.pivot_corner)
 
-    def found_predicate(cube: Cube):
-        return target_pattern.match(cube)
-
     def process_solution(state: Cube, rotations: Algorithm):
         print(f'{state} {len(rotations)} [ {str(rotations)} ]', flush=True)
 
-    explore_solutions = ExploreSolutions(allowed_rotations, found_predicate, process_solution)
+    if args.solve:
+        if not target_pattern.is_cube():
+            error_and_exit('Cannot solve a cube pattern, please provide a well-defined cube position as the target')
+        solution_explorer = CubeSolver(allowed_rotations, process_solution, target_pattern.to_cube())
+    else:
+        solution_explorer = ExploreSolutions(allowed_rotations, process_solution, lambda c : target_pattern.match(c))
+
     found = False
     depth = 1
     while (args.goto_max_depth or not found) and depth <= args.max:
         print(f'Recurse depth: {depth} {funny_hint(depth)}', flush=True)
-        found = explore_solutions.recursive_dfs_exploration(depth)
+        found = solution_explorer.dfs_exploration(depth)
         depth = depth + 1
 
 
