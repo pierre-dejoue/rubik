@@ -201,6 +201,11 @@ class CubePattern:
         assert self.is_cube()
         return Cube(list(map(int, self.permutation)), list(map(int, self.orientations)))
 
+    def check_parity(self) -> bool:
+        if self.wildcard in self.orientations:
+            return True
+        return self.to_cube().orientation() == 0
+
     def is_solvable(self, pivot):
         if self.is_cube():
             return self.to_cube().is_solvable(pivot)
@@ -562,6 +567,8 @@ def main():
         pivot_str += f' {corner_to_colors(pivot, face_colors)}'
     print(f'Pivot: {pivot_str}')
 
+    if not target_pattern.check_parity():
+        error_and_exit(f'The target pattern [{target_pattern}] has wrong parity')
     if not target_pattern.is_solvable(pivot):
         error_and_exit(f'The target pattern [{target_pattern}] cannot be obtained with pivot {pivot} ({CornerPosition.from_string(pivot)})')
 
