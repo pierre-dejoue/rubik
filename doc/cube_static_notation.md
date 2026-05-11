@@ -33,6 +33,19 @@ The 8 corners of the cube are identified as follows:
       4   5
 ```
 
+The 8 corners can also be described with a three-letter string. Each letter corresponds to one of the three visible faces. The letters are in the order of the X, Y, Z axis. For example the corner #3 can be written LUB, for Left, Up, Back. The full correspondence is listed below:
+
+```
+    0: LDB
+    1: RDB
+    2: RUB
+    3: LUB
+    4: LDF
+    5: RDF
+    6: RUF
+    7: LUF
+```
+
 ## Orientation of the corners
 
 There are three possible orientations of a corner. To explain the naming convention used here, let's first observe that every corner has a colored face that is either down (D), or up (U) when the cube is in the solved state. Let's call that unique face the "star" face of that corner (*). With the Western color scheme, the * face is either the white or the yellow one.

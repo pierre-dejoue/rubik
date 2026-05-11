@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 """
 Find algorithms for the 2x2x2 Rubik's cube.
-
-License:
-    MIT License
 """
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2022 Pierre DEJOUE
 import argparse
 import configparser
 import copy
@@ -16,6 +15,10 @@ from typing import override
 
 
 DEFAULT_CONFIG_FILE = 'config.ini'
+
+DEFAULT_MAX_DEPTH = 10
+
+CYCLIC_ORDER_UPPER_BOUND = 4000000
 
 ADDITIONAL_DOCUMENTATION = './doc/cube_static_notation.md'
 
@@ -389,18 +392,20 @@ class Algorithm:
         if rotation.repeat > 0:
             self.rotations.append(rotation)
 
-    def apply(self, cube: Cube = Cube.solved()) -> Cube:
+    def apply(self, cube: Cube | None = None) -> Cube:
+        if cube is None:
+            cube = Cube.solved()
         result_cube = copy.deepcopy(cube)
         for rr in self.rotations:
             for _ in range(rr.repeat):
                 result_cube = rr.rot.apply(result_cube)
         return result_cube
 
-    def cyclic_order(self):
+    def cyclic_order(self, max_order: int = CYCLIC_ORDER_UPPER_BOUND):
         order = 0
         cube = Cube.solved()
-        while True:
-            order = order + 1
+        while order < max_order:
+            order += 1
             cube = self.apply(cube)
             if cube.is_solved():
                 break
@@ -503,13 +508,7 @@ def funny_hint(depth: int) -> str:
 
 
 def get_face_colors_from_config() -> dict[str, str]:
-    colors = {}
-    colors['R'] = config.get('colors', 'face_R', fallback='')
-    colors['L'] = config.get('colors', 'face_L', fallback='')
-    colors['U'] = config.get('colors', 'face_U', fallback='')
-    colors['D'] = config.get('colors', 'face_D', fallback='')
-    colors['F'] = config.get('colors', 'face_F', fallback='')
-    colors['B'] = config.get('colors', 'face_B', fallback='')
+    colors = {face: config.get('colors', f'face_{face}', fallback='') for face in ALL_FACES}
     if not all(colors.values()) or len(set(colors.values())) != 6:
         return {}
     return colors
@@ -530,15 +529,15 @@ def main():
     parser.add_argument('--show-colors', dest='show_colors', action='store_true',
                         help='Show the association of faces to colors then exit')
     parser.add_argument('--solve', dest='solve', action='store_true',
-                        help='Solve the cube from the position given with -c/--cube')
-    parser.add_argument('--max', dest='max', type=int, required=False, default=10,
-                        help='Max search depth')
+                        help='Solve the cube from the position defined with -c/--cube')
+    parser.add_argument('--max', dest='max', type=int, required=False, default=DEFAULT_MAX_DEPTH,
+                        help=f'Max search depth. (Default: {DEFAULT_MAX_DEPTH})')
     parser.add_argument('--maxmax', dest='goto_max_depth', action='store_true',
-                        help='Go to max search depth.')
+                        help='Always go to max search depth')
     parser.add_argument('-c', '--cube', dest='cube', required=False, default=str(Cube.solved()),
-                        help='A configuration of the cube')
+                        help='A configuration of the cube. Read the doc with --doc.')
     parser.add_argument('-p', '--pivot', dest='pivot_corner', required=False, default=CornerPosition.default_pivot,
-                        help=f'The pivot corner is to remain fixed. Default={CornerPosition.default_pivot}')
+                        help=f'The pivot corner is to remain fixed. (Default: {CornerPosition.default_pivot})')
     parser.add_argument('-a', '--algo', dest='algorithm', required=False, default=None,
                         help='Apply an algorithm to the cube. For example: "R U2 R\'"')
     args = parser.parse_args()
