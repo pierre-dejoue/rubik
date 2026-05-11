@@ -60,9 +60,17 @@ Read more about the move Singmaster notation of the Rubik's cube on [myrubik.com
 
 #### Static Notation
 
-The script is using a custom notation to capture any position of the cube (including [illegal positions not reachable from the solved state](https://www.speedcubing.com/chris/legal.html))
+The script is using a custom notation to capture any position of the 2x2 cube (including [illegal positions not reachable from the solved state](https://www.speedcubing.com/chris/legal.html))
 
-This notation is documented [here](./doc/cube_static_notation.md).
+That notation is documented [in details here](./doc/cube_static_notation.md), and below is a quick reference sheet:
+
+- The position of the corners is the following:
+
+![static position notation: Corner position](doc/img/cube_positions.png)
+
+- The orientation of the corners is shown below. We represent with a star ( * ) the face of the corner that is up (U) or down (D) in the solved state. With the Western color scheme, the * face is either the white or the yellow one.
+
+![static position notation: Corner orientation](doc/img/cube_orientations.png)
 
 ## Color Scheme
 

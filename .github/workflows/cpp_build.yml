@@ -31,3 +31,7 @@ jobs:
     - name: Build
       working-directory: ${{ github.workspace }}/cpp/build
       run: cmake --build . --config ${{ matrix.build_type }}
+
+    - name: Run Tests
+      working-directory: ${{ github.workspace }}/cpp/build
+      run: cmake --build . --target run_tests_rubik2x2 --config ${{ matrix.build_type }}

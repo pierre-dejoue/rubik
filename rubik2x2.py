@@ -250,6 +250,7 @@ class Rot:
         return self.cube.orientation() == 0
 
     def apply(self, cube: Cube) -> Cube:
+        """Apply this rotation to the cube"""
         permutation = [self.cube.permutation[p] for p in cube.permutation]
         orientations = [CornerOrientation.rotate(o, self.cube.orientations[p]) for (p, o) in cube]
         return Cube(permutation, orientations)

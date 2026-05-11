@@ -18,3 +18,8 @@ set(SOURCES
 file(GLOB HEADERS src/*.h)
 
 add_executable(god_rubik2x2 ${SOURCES} ${HEADERS})
+
+add_custom_target(run_tests_rubik2x2
+    $<TARGET_FILE:god_rubik2x2> --tests
+    COMMENT "Run Rubik 2x2 routine tests:"
+)

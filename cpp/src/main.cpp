@@ -13,8 +13,10 @@
 #include <cassert>
 #include <cstdlib>
 #include <cstdint>
+#include <cstring>
 #include <iostream>
 #include <memory>
+#include <string_view>
 
 std::size_t configurations_add_one_move(
     const rubik::two_by_two::ConfigBitset& prev_configs,
@@ -82,17 +84,58 @@ std::uint8_t find_god_number()
     return god_nb;
 }
 
-int main(int argc, char *argv[])
+void routine_tests()
 {
     using Cube = rubik::two_by_two::Cube;
-    const Cube solved_cube = rubik::two_by_two::solved_cube();
+    constexpr std::string_view sep = "--------- ";
+    {
+        std::cout << sep << "solved cube" << std::endl;
+        const Cube solved_cube = rubik::two_by_two::solved_cube();
+        std::cout << solved_cube << std::endl;
+        const auto solved_idx = rubik::two_by_two::serialize(solved_cube);
+        std::cout << "0x0" << std::hex << solved_idx << std::endl << rubik::two_by_two::deserialize(solved_idx) << std::endl;
+    }
+    {
+        std::cout << sep << "serialize/deserialize round trip " << std::endl;
+        const auto idx = 5625472;
+        const auto cube = rubik::two_by_two::deserialize(idx);
+        std::cout << "0x0" << std::hex << idx << std::endl << cube << std::endl << "0x0" << rubik::two_by_two::serialize(cube) << std::endl;
+    }
+    {
+        std::cout << sep << "apply rotations: R B" << std::endl;
+        Cube cube = rubik::two_by_two::solved_cube();
+        cube = apply_rotation(rubik::two_by_two::Rot_R(), cube);
+        cube = apply_rotation(rubik::two_by_two::Rot_B(), cube);
+        std::cout << cube << std::endl;
+    }
+    {
+        std::cout << sep << "apply rotations: B D B R D" << std::endl;
+        Cube cube = rubik::two_by_two::solved_cube();
+        cube = apply_rotation(rubik::two_by_two::Rot_B(), cube);
+        cube = apply_rotation(rubik::two_by_two::Rot_D(), cube);
+        cube = apply_rotation(rubik::two_by_two::Rot_B(), cube);
+        cube = apply_rotation(rubik::two_by_two::Rot_R(), cube);
+        cube = apply_rotation(rubik::two_by_two::Rot_D(), cube);
+        std::cout << cube << std::endl;
+    }
+}
+
+int main(int argc, char *argv[])
+{
+    if (argc == 2)
+    {
+        if (strncmp(argv[1], "--tests", 64) == 0)
+        {
+            routine_tests();
+        }
+        else
+        {
+            std::cerr << "Unknown argument: " << argv[1] << std::endl;
+            return 1;
+        }
+        return 0;
+    }
     std::cout << "Find the God's number of the 2x2x2 Rubik's cube" << std::endl;
-    std::cout << solved_cube << std::endl;
-    const auto solved_idx = rubik::two_by_two::serialize(solved_cube);
-    std::cout << "0x0" << std::hex << solved_idx << std::endl << rubik::two_by_two::deserialize(solved_idx) << std::endl;
-    const auto idx = 5625472;
-    const auto cube = rubik::two_by_two::deserialize(idx);
-    std::cout << "0x0" << std::hex << idx << std::endl << cube << std::endl << "0x0" << rubik::two_by_two::serialize(cube) << std::endl;
     const auto god_nb = find_god_number();
     std::cout << "God's number: " << std::dec << int(god_nb) << std::endl;
     return 0;

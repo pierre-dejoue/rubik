@@ -59,8 +59,11 @@ class TestAlgorithm(unittest.TestCase):
     def test_apply(self):
         self.assertEqual(repr(Algorithm().apply()),                        "01234567:00000000")
         self.assertEqual(repr(Algorithm.from_string("F").apply()),         "01237456:00002121")
+        self.assertEqual(repr(Algorithm.from_string("R F").apply()),       "04137526:02202111")
         self.assertEqual(repr(Algorithm.from_string("R B").apply()),       "15204637:11120220")
+        self.assertEqual(repr(Algorithm.from_string("R U").apply()),       "05124763:01200210")
         self.assertEqual(repr(Algorithm.from_string("B D B L D").apply()), "07341265:21200202")
+        self.assertEqual(repr(Algorithm.from_string("B D B R D").apply()), "13456027:00022110")
 
     def test_cyclic_order(self):
         self.assertEqual(Algorithm().cyclic_order(),                        1)
@@ -68,8 +71,11 @@ class TestAlgorithm(unittest.TestCase):
         self.assertEqual(Algorithm.from_string("R2").cyclic_order(),        2)
         self.assertEqual(Algorithm.from_string("X" ).cyclic_order(),        4)
         self.assertEqual(Algorithm.from_string("D'").cyclic_order(),        4)
+        self.assertEqual(Algorithm.from_string("R F").cyclic_order(),       15)
         self.assertEqual(Algorithm.from_string("R B").cyclic_order(),       15)
+        self.assertEqual(Algorithm.from_string("R U").cyclic_order(),       15)
         self.assertEqual(Algorithm.from_string("B D B L D").cyclic_order(), 18)
+        self.assertEqual(Algorithm.from_string("B D B R D").cyclic_order(), 12)
 
     def test_repr(self):
         self.assertEqual(repr(Algorithm()),                           "")

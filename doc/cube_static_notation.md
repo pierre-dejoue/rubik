@@ -35,7 +35,7 @@ The 8 corners of the cube are identified as follows:
 
 ## Orientation of the corners
 
-There are three possible orientations of a corner. To explain the naming convention used here, let's first observe that every corner has a colored face that is either down (D), or up (U) when the cube is in the solved state. Let's call that unique face the star face of the corner (*).
+There are three possible orientations of a corner. To explain the naming convention used here, let's first observe that every corner has a colored face that is either down (D), or up (U) when the cube is in the solved state. Let's call that unique face the "star" face of that corner (*). With the Western color scheme, the * face is either the white or the yellow one.
 
 The orientation of a corner is then:
 
@@ -45,35 +45,36 @@ The orientation of a corner is then:
 
 ## Understand a static position
 
-Let's see an example of a static position and decipher it. We'll use the script to generate the position after the moves "R B":
+Let's see an example of a static position and decipher it. We'll use the script to generate the position after the moves "R U":
 
 ```
-$ python rubik2x2.py -a "R B"
-15204637:11120220
---~-+--+
+$ python rubik2x2.py -a "R U"
+05124763:01200210
++---+-~-
 cyclic_order: 15
 ```
 
-### Position: 15204637
+### Position: 05124763
 
-This is a permutation of the solved position. The digit at index x infoms us about the current position of the original corner x. For example, the first digit tells us that corner 0 moved to position 1. Similarly:
+This is a permutation, noted _p_, of the solved position. The digit at index x infoms us about the current position of the original corner x. For example, the second digit tells us that corner 1 moved to position 5. Similarly for the other corners:
 
 ```
-"Corner X moved to position Y"
+"Corner X moved to position Y = p(X)"
 
-X -> Y
-0 -> 1
-1 -> 5
-2 -> 2
-3 -> 0
-4 -> 4
-5 -> 6
-6 -> 3
-7 -> 7
+  X: 0 1 2 3 4 5 6 7
+  Y: 0 5 1 2 4 7 6 3
 ```
 
-Notice that corners 2, 4 and 7 remained at their initial position.
+Viewed that way, this is the [two-line notation](https://en.wikipedia.org/wiki/Permutation#Two-line_notation) of permutation _p_, of which we kept only the second line.
 
-### Orientations: 11120220
+Notice that corners 0, 4 and 6 remained at their initial position.
 
-TBD
+Also notice that the other corners are permutated in a cycle of period 5: (57321)
+
+### Orientations: 01200210
+
+The orientation of all corners, indexed by their position of origin.
+
+Going back to our discussion in the previous section: Corner 1 moved to position 5 due to the permutation. Looking at index 1 in the orientation array teaches us that corner 1 also has changed orientation by 1, i.e. a clockwise one-third rotation.
+
+Another interesting example is corner 6, which stays at the same position, but change orientation. It has orientation 1, i.e. clockwise. One effect of the sequence of two moves "R U" is indeed to turn the corner 6 (the Right, Up, Front corner) in-place 120° clockwise.
