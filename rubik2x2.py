@@ -51,6 +51,11 @@ def _get_static_repr_str(permutation: str, orientations: str) -> str:
     return f'{permutation}{REPR_SEP}{orientations}'
 
 
+def _get_perm_cycles_str(permutation_cycles: list[list[int]]) -> str:
+    join_cyc = map(lambda cyc: ''.join(map(str, cyc)), permutation_cycles)
+    return f'({')('.join(join_cyc)})'
+
+
 class CornerPosition:
     """Corner position
 
@@ -134,6 +139,23 @@ class Cube:
 
     def orientation(self):
         return reduce(CornerOrientation.rotate, self.orientations, 0)
+
+    def permutation_cycles(self) -> list[list[int]]:
+        """Return the permutation cycles, by decreasing length (start with the longest cycle)"""
+        visited = set()
+        cycles = []
+        for pos in range(8):
+            if pos not in visited:
+                cycle = [ ]
+                while pos not in cycle:
+                    assert pos not in visited
+                    cycle.append(pos)
+                    visited.add(pos)
+                    pos = self.permutation[pos]
+                cycles.append(cycle)
+        cycles = sorted(cycles, key=len, reverse=True)
+        assert sum(map(len, cycles)) == 8
+        return cycles
 
     def is_solvable(self, pivot):
         idx = CornerPosition.from_string(pivot)
@@ -582,6 +604,8 @@ def main():
         for idx in fixed_position_n_orientation:
             fixed_corners[idx] = '+'
         print(''.join(fixed_corners))
+        perm_cycles = _get_perm_cycles_str(cube.permutation_cycles())
+        print(f'perm_cycles: {perm_cycles}')
         print(f'cyclic_order: {algo.cyclic_order()}')
         return
 

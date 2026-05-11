@@ -77,6 +77,17 @@ class TestAlgorithm(unittest.TestCase):
         self.assertEqual(Algorithm.from_string("B D B L D").cyclic_order(), 18)
         self.assertEqual(Algorithm.from_string("B D B R D").cyclic_order(), 12)
 
+    def test_permutation_cycles(self):
+        def algo_to_cycle_lengths(algo: str) -> list[int]:
+            cube = Algorithm.from_string(algo).apply()
+            return list(map(len, cube.permutation_cycles()))
+        self.assertEqual(algo_to_cycle_lengths("R"),         [4, 1, 1, 1, 1])
+        self.assertEqual(algo_to_cycle_lengths("R2"),        [2, 2, 1, 1, 1, 1])
+        self.assertEqual(algo_to_cycle_lengths("X"),         [4, 4])
+        self.assertEqual(algo_to_cycle_lengths("R U"),       [5, 1, 1, 1])
+        self.assertEqual(algo_to_cycle_lengths("B D B L D"), [6, 1, 1])
+        self.assertEqual(algo_to_cycle_lengths("B D B R D"), [4, 3, 1])
+
     def test_repr(self):
         self.assertEqual(repr(Algorithm()),                           "")
         self.assertEqual(repr(Algorithm.from_string("F")),            "F")
