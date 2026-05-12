@@ -571,7 +571,7 @@ def main():
             with open(doc_filepath, 'r', encoding='utf-8') as fp:
                 print('\n')
                 for line in fp:
-                    print(f'{indent}{line.strip()}')
+                    print(f'{indent}{line.rstrip()}')
                 print('\n')
         except FileNotFoundError:
             error_and_exit(f'The documentation file was not found: {doc_filepath}')

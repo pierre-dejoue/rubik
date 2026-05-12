@@ -7,20 +7,23 @@ Algorithm Finder for the 2x2x2 Rubik's Cube
 ## Usage
 
 ```
-$ python rubik2x2.py -h
-usage: rubik2x2.py [-h] [--doc] [--max MAX] [--maxmax] [-c CUBE] [-p PIVOT_CORNER] [-a ALGORITHM]
+$ python rubik2x2.py --help
+usage: rubik2x2.py [-h] [--doc] [--show-colors] [--solve] [--max MAX] [--maxmax] [-c CUBE] [-p PIVOT_CORNER] [-a ALGORITHM]
 
-Find algorithms for the 2x2x2 Rubik's cube. License: MIT License
+Find algorithms for the 2x2x2 Rubik's cube.
 
 options:
   -h, --help            show this help message and exit
   --doc                 Additional documentation
-  --max MAX             Max search depth
-  --maxmax              Go to max search depth.
-  -c, --cube CUBE       A configuration of the cube
+  --show-colors         Show the association of faces to colors then exit
+  --solve               Solve the cube from the position defined with -c/--cube
+  --max MAX             Max search depth. (Default: 10)
+  --maxmax              Always go to max search depth
+  -c, --cube CUBE       A configuration of the cube. Read the doc with --doc.
   -p, --pivot PIVOT_CORNER
-                        Pivot corner. Default=LDB
+                        The pivot corner is to remain fixed. (Default: LDB)
   -a, --algo ALGORITHM  Apply an algorithm to the cube. For example: "R U2 R'"
+
 ```
 
 ## Tutorial
