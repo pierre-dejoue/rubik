@@ -4,15 +4,15 @@ Find algorithms for the 2x2x2 Rubik's cube.
 """
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2022 Pierre DEJOUE
+from __future__ import annotations
+
 import argparse
 import configparser
 import copy
 import re
 import sys
-from functools import reduce
 from types import SimpleNamespace
-from typing import override, Self
-
+from typing import override
 
 
 DEFAULT_CONFIG_FILE = 'config.ini'
@@ -187,7 +187,7 @@ class Cube:
         print(f'perm_cycles: {perm_cycles}')
         print(f'cyclic_order: {self.cyclic_order()}')
 
-    def apply(self, cube: Self) -> Self:
+    def apply(self, cube: Cube) -> Cube:
         """Apply the transformation encoded in this cube to the cube passed as argument"""
         permutation = [self.permutation[p] for p in cube.permutation]
         orientations = [CornerOrientation.rotate(o, self.orientations[p]) for (p, o) in cube]
@@ -232,7 +232,7 @@ class Cube:
         return True
 
     @classmethod
-    def from_string(cls, cube_str: str) -> Self:
+    def from_string(cls, cube_str: str) -> Cube:
         assert cls.is_valid_string(cube_str)
         lists = cube_str.split(REPR_SEP)
         perm = list(map(int, list(lists[0])))
@@ -240,7 +240,7 @@ class Cube:
         return cls(perm, orient)
 
     @classmethod
-    def solved(cls) -> Self:
+    def solved(cls) -> Cube:
         return cls([0, 1, 2, 3, 4, 5, 6, 7], [0, 0, 0, 0, 0, 0, 0, 0])
 
     def is_solved(self) -> bool:
@@ -322,7 +322,7 @@ class Rot:
         return cls(Cube(permutation, orientations), axis, name)
 
     @classmethod
-    def identity(cls) -> Self:
+    def identity(cls) -> Rot:
         return cls(Cube.solved(), 'X', 'I')
 
     def is_valid(self) -> bool:
@@ -397,11 +397,11 @@ class RepeatRot:
         return self.__repr__()
 
     @classmethod
-    def identity(cls) -> Self:
+    def identity(cls) -> RepeatRot:
         return cls(Rot.identity(), 0)
 
     @classmethod
-    def from_string(cls, rot_str: str) -> Self:
+    def from_string(cls, rot_str: str) -> RepeatRot:
         """Rotations
 
         Rotation along the X axis:
@@ -488,7 +488,7 @@ class Algorithm:
         return new_algo
 
     @classmethod
-    def from_string(cls, algo: str) -> Self:
+    def from_string(cls, algo: str) -> Algorithm:
         result = cls()
         for rot in algo.split():
             r = RepeatRot.from_string(rot)
