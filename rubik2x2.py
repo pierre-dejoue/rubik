@@ -141,7 +141,14 @@ class Cube:
     def __iter__(self):
         return zip(self.permutation, self.orientations)
 
-    def orientation(self):
+    def orientation_class(self) -> int:
+        """Return the orientation class of the cube (0, 1 or 2)
+
+        There exist three equivalence classes of the 2x2x2 cobe, only dependent on the orientations
+        of the corners. Two cubes belong to the same class if the sum of the orientation of their
+        respective corners are equal modulo 3. If that is the case, it is possible to transform the
+        cube between those two configurations using only legal moves. Otherwise, it is impossible.
+        """
         return sum(self.orientations) % CornerOrientation.ORDER
 
     def permutation_cycles(self) -> list[list[int]]:
@@ -164,8 +171,8 @@ class Cube:
     def is_solvable(self, pivot: str) -> bool:
         idx = CornerPosition.from_string(pivot)
         pivot_is_fixed = self.permutation[idx] == idx and self.orientations[idx] == 0
-        orientation_is_zero = self.orientation() == 0
-        return pivot_is_fixed and orientation_is_zero
+        parity_is_zero = self.orientation_class() == 0
+        return pivot_is_fixed and parity_is_zero
 
     def fixed_corners(self) -> tuple[list[int], list[int]]:
         fixed_position = [idx for idx in range(8) if self.permutation[idx] == idx]
@@ -182,7 +189,7 @@ class Cube:
         for idx in fixed_position_and_orientation:
             fixed_corners[idx] = '+'
         print(''.join(fixed_corners))
-        print(f'orientation: {self.orientation()}')
+        print(f'orientation_class: {self.orientation_class()}')
         perm_cycles = _get_perm_cycles_str(self.permutation_cycles())
         print(f'perm_cycles: {perm_cycles}')
         print(f'cyclic_order: {self.cyclic_order()}')
@@ -278,7 +285,7 @@ class CubePattern:
     def check_parity(self) -> bool:
         if not self.is_cube():
             return True
-        return self.to_cube().orientation() == 0
+        return self.to_cube().orientation_class() == 0
 
     def is_solvable(self, pivot: str) -> bool:
         if self.is_cube():
@@ -326,7 +333,7 @@ class Rot:
         return cls(Cube.solved(), 'X', 'I')
 
     def is_valid(self) -> bool:
-        return self.cube.orientation() == 0
+        return self.cube.orientation_class() == 0
 
     def apply(self, cube: Cube) -> Cube:
         """Apply this rotation to the cube"""
