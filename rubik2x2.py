@@ -14,13 +14,14 @@ from types import SimpleNamespace
 from typing import override, Self
 
 
+
 DEFAULT_CONFIG_FILE = 'config.ini'
+
+ADDITIONAL_DOCUMENTATION = './doc/cube_static_notation.md'
 
 DEFAULT_MAX_DEPTH = 10
 
-CYCLIC_ORDER_UPPER_BOUND = 4000000
-
-ADDITIONAL_DOCUMENTATION = './doc/cube_static_notation.md'
+CYCLIC_ORDER_UPPER_BOUND = 100      # Theoritical maximum is 45
 
 ALL_FACES = ['R', 'L', 'U', 'D', 'F', 'B']
 
@@ -193,7 +194,17 @@ class Cube:
         return Cube(permutation, orientations)
 
     def cyclic_order(self):
-        """Return the period of the cycle defined by this cube"""
+        """Return the cycle period of the transformation defined by this cube
+
+        The theoretical maximum is 45. The maximum cycle on the permutations alone is the max
+        LCM of the possible combinations of cycles. This is obtained with the partition 8=3+5,
+        and therefore 15 iterations. We then multiply by 3 to account for the maximum cycle
+        on the orientation of the corners. The key insight is orientations are not independent
+        of the permutation cycle structure. Within a given cycle of length k, after k iterations
+        of the algorithm, every corner in that cycle returns to its original position. And the
+        orientation change accumulated over one full cycle is *the same for every corner in that
+        cycle. The orientation of each cycle is characterized by a single value in {0, 1, 2}.
+        """
         order = 0
         cube = Cube.solved()
         while order < CYCLIC_ORDER_UPPER_BOUND:

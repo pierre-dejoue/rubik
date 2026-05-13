@@ -3,7 +3,7 @@ Unit tests of the rubik2x2 module
 """
 import unittest
 
-from rubik2x2 import (Algorithm, CWQuarterRot, RepeatRot,
+from rubik2x2 import (Algorithm, Cube, CWQuarterRot, RepeatRot,
                       cw_quarter_rotation_to_string, rotations_from_pivot)
 
 
@@ -54,6 +54,30 @@ class TestRepeatRot(unittest.TestCase):
         self.assertEqual(repr(id_rot), "I")
 
 
+class TestCube(unittest.TestCase):
+    """Test the Cube class"""
+
+    # An example of a cube configuration, without a pivot, with the theoretical maximum cyclic_order
+    CUBE_MAX_CYCLE_ORDER = '45126703:01200210'
+
+    # An example of a cube configuration, with a pivot, with the theoretical maximum cyclic_order
+    CUBE_W_PIVOT_MAX_CYCLE_ORDER = '05126743:01200210'
+
+    def test_init(self):
+        self.assertEqual(repr(Cube.solved()),                                            "01234567:00000000")
+        self.assertEqual(repr(Cube([0, 1, 2, 3, 7, 4, 5, 6], [0, 0, 0, 0, 2, 1, 2, 1])), "01237456:00002121")
+
+    def test_permutation_cycles(self):
+        def static_position_to_cycles(cube_str: str) -> list[set[int]]:
+            return list(map(set, Cube.from_string(cube_str).permutation_cycles()))
+        self.assertEqual(static_position_to_cycles(self.CUBE_MAX_CYCLE_ORDER),         [{1, 2, 3, 5, 7}, {0, 4, 6}])
+        self.assertEqual(static_position_to_cycles(self.CUBE_W_PIVOT_MAX_CYCLE_ORDER), [{1, 2, 3, 5, 7}, {4, 6}, {0}])
+
+    def test_cyclic_order(self):
+        self.assertEqual(Cube.from_string(self.CUBE_MAX_CYCLE_ORDER        ).cyclic_order(), 45)
+        self.assertEqual(Cube.from_string(self.CUBE_W_PIVOT_MAX_CYCLE_ORDER).cyclic_order(), 30)
+
+
 class TestAlgorithm(unittest.TestCase):
     """Test the Algorithm class"""
 
@@ -67,7 +91,7 @@ class TestAlgorithm(unittest.TestCase):
         self.assertEqual(repr(Algorithm.from_string("B D B L D").apply()), "07341265:21200202")
         self.assertEqual(repr(Algorithm.from_string("B D B R D").apply()), "13456027:00022110")
 
-    def test_cube_cyclic_order(self):
+    def test_cyclic_order(self):
         self.assertEqual(Algorithm().cyclic_order(),                        1)
         self.assertEqual(Algorithm.from_string("I" ).cyclic_order(),        1)
         self.assertEqual(Algorithm.from_string("R" ).cyclic_order(),        4)
