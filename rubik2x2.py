@@ -397,9 +397,10 @@ class RepeatRot:
         Y = D' U
         Z = B' F
         """
-        assert len(rot_str) == 1 or len(rot_str) == 2
-        if rot_str == 'I':
+        if len(rot_str) == 0 or rot_str == 'I':
             return cls.identity()
+        if len(rot_str) > 2:
+            raise ValueError(f'Invalid rotation string [{rot_str}]')
         cw_quarter_turns = 1
         if rot_str[-1] == '2':
             rot_str = rot_str[:-1]
@@ -407,9 +408,10 @@ class RepeatRot:
         elif rot_str[-1] == '\'' or rot_str[-1] == '3':
             rot_str = rot_str[:-1]
             cw_quarter_turns = 3
-        assert len(rot_str) == 1
+        if len(rot_str) == 2:
+            raise ValueError(f'Invalid rotation string [{rot_str}]')
         if rot_str not in all_cw_quarter_rotations:
-            raise RuntimeError(f'Rotation not found [{rot_str}]')
+            raise ValueError(f'Rotation not found [{rot_str}]')
         return cls(all_cw_quarter_rotations[rot_str], cw_quarter_turns)
 
 
@@ -616,7 +618,10 @@ def main():
             error_and_exit('The options --algo/-a and --solve are incompatible')
         if not cube_pattern.is_cube():
             error_and_exit('Cannot apply an algorithm to a cube pattern with wildcards, please provide a well-defined cube position')
-        algo = Algorithm.from_string(args.algorithm)
+        try:
+            algo = Algorithm.from_string(args.algorithm)
+        except ValueError as e:
+            error_and_exit('Invalid cube pattern: ' + str(e))
         cube = algo.apply(cube_pattern.to_cube())
         cube.rich_print()
         print(f'algo.cyclic_order: {algo.cyclic_order()}')
