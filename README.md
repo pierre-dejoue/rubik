@@ -7,8 +7,8 @@ Algorithm Finder for the 2x2x2 Rubik's Cube
 ## Usage
 
 ```
-$ python rubik2x2.py --help
-usage: rubik2x2.py [-h] [--doc] [--show-colors] [--solve] [--search] [--max MAX] [--maxmax] [-c CUBE] [-p PIVOT] [-a ALGO]
+$ python rubik2x2.py -h
+usage: rubik2x2.py [-h] [--doc] [--show-colors] [--solve] [--search] [--max MAX] [--maxmax] [-c CUBE] [-p PIVOT] [-a ALGO] [-r N]
 
 Find algorithms for the 2x2x2 Rubik's cube.
 
@@ -23,6 +23,7 @@ options:
   -c, --cube CUBE      A configuration, or pattern, of the cube. Read the doc with --doc.
   -p, --pivot PIVOT    The pivot corner is to remain fixed. (Default: LDB)
   -a, --algo ALGO      Apply an algorithm to the cube. For example: "R U2 R'"
+  -r, --algo-repeat N  Repeat the algorithm N times
 ```
 
 ## Tutorial

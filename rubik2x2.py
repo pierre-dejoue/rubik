@@ -443,14 +443,19 @@ class Algorithm:
         if rotation.repeat > 0:
             self.rotations.append(rotation)
 
-    def apply(self, cube: Cube | None = None) -> Cube:
+    def apply(self, cube: Cube | None = None, repeat: int = 1) -> Cube:
         if cube is None:
             cube = Cube.solved()
-        transformed_cube = copy.deepcopy(cube)
+        repeat = max(repeat, 1)
+        algo_cube = copy.deepcopy(cube)
         for rr in self.rotations:
             for _ in range(rr.repeat):
-                transformed_cube = rr.rot.apply(transformed_cube)
-        return transformed_cube
+                algo_cube = rr.rot.apply(algo_cube)
+        repeat_algo_cube = copy.deepcopy(algo_cube)
+        while repeat > 1:
+            repeat_algo_cube = algo_cube.apply(repeat_algo_cube)
+            repeat -= 1
+        return repeat_algo_cube
 
     def cyclic_order(self):
         return self.apply().cyclic_order()
@@ -589,6 +594,8 @@ def main():
                         help=f'The pivot corner is to remain fixed. (Default: {CornerPosition.default_pivot})')
     parser.add_argument('-a', '--algo', dest='algorithm', required=False, default=None, metavar='ALGO',
                         help='Apply an algorithm to the cube. For example: "R U2 R\'"')
+    parser.add_argument('-r', '--algo-repeat', dest='algorithm_repeat', type=int, required=False, metavar='N', default=1,
+                        help='Repeat the algorithm N times')
     args = parser.parse_args()
 
     indent = 4*' '
@@ -640,7 +647,7 @@ def main():
             algo = Algorithm.from_string(args.algorithm)
         except ValueError as e:
             error_and_exit('Invalid cube pattern: ' + str(e))
-        cube = algo.apply(cube_pattern.to_cube())
+        cube = algo.apply(cube_pattern.to_cube(), args.algorithm_repeat)
         cube.rich_print()
         return
 
