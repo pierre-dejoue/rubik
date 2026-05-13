@@ -67,7 +67,7 @@ class TestAlgorithm(unittest.TestCase):
         self.assertEqual(repr(Algorithm.from_string("B D B L D").apply()), "07341265:21200202")
         self.assertEqual(repr(Algorithm.from_string("B D B R D").apply()), "13456027:00022110")
 
-    def test_cyclic_order(self):
+    def test_cube_cyclic_order(self):
         self.assertEqual(Algorithm().cyclic_order(),                        1)
         self.assertEqual(Algorithm.from_string("I" ).cyclic_order(),        1)
         self.assertEqual(Algorithm.from_string("R" ).cyclic_order(),        4)

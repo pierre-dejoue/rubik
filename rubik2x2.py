@@ -11,7 +11,7 @@ import re
 import sys
 from functools import reduce
 from types import SimpleNamespace
-from typing import override
+from typing import override, Self
 
 
 DEFAULT_CONFIG_FILE = 'config.ini'
@@ -182,6 +182,24 @@ class Cube:
         print(''.join(fixed_corners))
         perm_cycles = _get_perm_cycles_str(self.permutation_cycles())
         print(f'perm_cycles: {perm_cycles}')
+        print(f'cyclic_order: {self.cyclic_order()}')
+
+    def apply(self, cube: Self) -> Self:
+        """Apply the transformation encoded in this cube to the cube passed as argument"""
+        permutation = [self.permutation[p] for p in cube.permutation]
+        orientations = [CornerOrientation.rotate(o, self.orientations[p]) for (p, o) in cube]
+        return Cube(permutation, orientations)
+
+    def cyclic_order(self):
+        """Return the period of the cycle defined by this cube"""
+        order = 0
+        cube = Cube.solved()
+        while order < CYCLIC_ORDER_UPPER_BOUND:
+            order += 1
+            cube = self.apply(cube)
+            if cube.is_solved():
+                break
+        return order
 
     def __eq__(self, other):
         return self.permutation == other.permutation and self.orientations == other.orientations
@@ -201,7 +219,7 @@ class Cube:
         return True
 
     @classmethod
-    def from_string(cls, cube_str: str) -> 'Cube':
+    def from_string(cls, cube_str: str) -> Self:
         assert cls.is_valid_string(cube_str)
         lists = cube_str.split(REPR_SEP)
         perm = list(map(int, list(lists[0])))
@@ -209,7 +227,7 @@ class Cube:
         return cls(perm, orient)
 
     @classmethod
-    def solved(cls) -> 'Cube':
+    def solved(cls) -> Self:
         return cls([0, 1, 2, 3, 4, 5, 6, 7], [0, 0, 0, 0, 0, 0, 0, 0])
 
     def is_solved(self) -> bool:
@@ -291,7 +309,7 @@ class Rot:
         return cls(Cube(permutation, orientations), axis, name)
 
     @classmethod
-    def identity(cls) -> 'Rot':
+    def identity(cls) -> Self:
         return cls(Cube.solved(), 'X', 'I')
 
     def is_valid(self) -> bool:
@@ -299,9 +317,7 @@ class Rot:
 
     def apply(self, cube: Cube) -> Cube:
         """Apply this rotation to the cube"""
-        permutation = [self.cube.permutation[p] for p in cube.permutation]
-        orientations = [CornerOrientation.rotate(o, self.cube.orientations[p]) for (p, o) in cube]
-        return Cube(permutation, orientations)
+        return self.cube.apply(cube)
 
     def __repr__(self):
         return self.name
@@ -368,11 +384,11 @@ class RepeatRot:
         return self.__repr__()
 
     @classmethod
-    def identity(cls) -> 'RepeatRot':
+    def identity(cls) -> Self:
         return cls(Rot.identity(), 0)
 
     @classmethod
-    def from_string(cls, rot_str: str) -> 'RepeatRot':
+    def from_string(cls, rot_str: str) -> Self:
         """Rotations
 
         Rotation along the X axis:
@@ -428,21 +444,14 @@ class Algorithm:
     def apply(self, cube: Cube | None = None) -> Cube:
         if cube is None:
             cube = Cube.solved()
-        result_cube = copy.deepcopy(cube)
+        transformed_cube = copy.deepcopy(cube)
         for rr in self.rotations:
             for _ in range(rr.repeat):
-                result_cube = rr.rot.apply(result_cube)
-        return result_cube
+                transformed_cube = rr.rot.apply(transformed_cube)
+        return transformed_cube
 
-    def cyclic_order(self, max_order: int = CYCLIC_ORDER_UPPER_BOUND):
-        order = 0
-        cube = Cube.solved()
-        while order < max_order:
-            order += 1
-            cube = self.apply(cube)
-            if cube.is_solved():
-                break
-        return order
+    def cyclic_order(self):
+        return self.apply().cyclic_order()
 
     def __len__(self):
         return len(self.rotations)
@@ -461,7 +470,7 @@ class Algorithm:
         return new_algo
 
     @classmethod
-    def from_string(cls, algo: str):
+    def from_string(cls, algo: str) -> Self:
         result = cls()
         for rot in algo.split():
             r = RepeatRot.from_string(rot)
@@ -624,7 +633,6 @@ def main():
             error_and_exit('Invalid cube pattern: ' + str(e))
         cube = algo.apply(cube_pattern.to_cube())
         cube.rich_print()
-        print(f'algo.cyclic_order: {algo.cyclic_order()}')
         return
 
     # Cube pattern (sanity checks)
