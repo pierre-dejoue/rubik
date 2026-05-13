@@ -107,10 +107,11 @@ class CornerOrientation:
       1: clockwise rotation from the 0 orientation
       2: counterclockwise rotation from the 0 orientation
     """
+    ORDER = 3
 
-    @staticmethod
-    def rotate(orientation, rotation):
-        return (orientation + rotation) % 3
+    @classmethod
+    def rotate(cls, orientation: int, rotation: int) -> int:
+        return (orientation + rotation) % cls.ORDER
 
 
 class Cube:
@@ -140,7 +141,7 @@ class Cube:
         return zip(self.permutation, self.orientations)
 
     def orientation(self):
-        return reduce(CornerOrientation.rotate, self.orientations, 0)
+        return sum(self.orientations) % CornerOrientation.ORDER
 
     def permutation_cycles(self) -> list[list[int]]:
         """Return the permutation cycles, by decreasing length (start with the longest cycle)"""
@@ -180,6 +181,7 @@ class Cube:
         for idx in fixed_position_and_orientation:
             fixed_corners[idx] = '+'
         print(''.join(fixed_corners))
+        print(f'orientation: {self.orientation()}')
         perm_cycles = _get_perm_cycles_str(self.permutation_cycles())
         print(f'perm_cycles: {perm_cycles}')
         print(f'cyclic_order: {self.cyclic_order()}')
@@ -231,7 +233,7 @@ class Cube:
         return cls([0, 1, 2, 3, 4, 5, 6, 7], [0, 0, 0, 0, 0, 0, 0, 0])
 
     def is_solved(self) -> bool:
-        return self.permutation == [0, 1, 2, 3, 4, 5, 6, 7] and all(o == 0 for o in self.orientations)
+        return all(i == v for i, v in enumerate(self.permutation)) and all(o == 0 for o in self.orientations)
 
 
 class CubePattern:
@@ -574,16 +576,18 @@ def main():
     parser.add_argument('--show-colors', dest='show_colors', action='store_true',
                         help='Show the association of faces to colors then exit')
     parser.add_argument('--solve', dest='solve', action='store_true',
-                        help='Solve the cube from the position defined with -c/--cube')
+                        help='Solve the cube from the position defined by -c/--cube')
+    parser.add_argument('--search', dest='search', action='store_true',
+                        help='Search algorithms that match the cube pattern defined by-c/--cube')
     parser.add_argument('--max', dest='max', type=int, required=False, default=DEFAULT_MAX_DEPTH,
                         help=f'Max search depth. (Default: {DEFAULT_MAX_DEPTH})')
     parser.add_argument('--maxmax', dest='goto_max_depth', action='store_true',
                         help='Always go to the max search depth')
     parser.add_argument('-c', '--cube', dest='cube', required=False, default=str(Cube.solved()),
-                        help='A configuration of the cube. Read the doc with --doc.')
-    parser.add_argument('-p', '--pivot', dest='pivot_corner', required=False, default=CornerPosition.default_pivot,
+                        help='A configuration, or pattern, of the cube. Read the doc with --doc.')
+    parser.add_argument('-p', '--pivot', dest='pivot_corner', required=False, default=CornerPosition.default_pivot, metavar='PIVOT',
                         help=f'The pivot corner is to remain fixed. (Default: {CornerPosition.default_pivot})')
-    parser.add_argument('-a', '--algo', dest='algorithm', required=False, default=None,
+    parser.add_argument('-a', '--algo', dest='algorithm', required=False, default=None, metavar='ALGO',
                         help='Apply an algorithm to the cube. For example: "R U2 R\'"')
     args = parser.parse_args()
 
@@ -616,6 +620,9 @@ def main():
             print(f'No color configuration found, check {DEFAULT_CONFIG_FILE}')
         return
 
+    if args.solve and args.search:
+        error_and_exit('The options --search and --solve are incompatible with each other')
+
     # Read the cube pattern
     if not CubePattern.is_valid_string(args.cube):
         error_and_exit(f'Invalid cube pattern: {args.cube}')
@@ -624,7 +631,9 @@ def main():
     # Apply an algorithm (e.g. "L U") on the cube passed as argument (--cube/-c)
     if args.algorithm is not None:      # Empty string: The transformation is the identity
         if args.solve:
-            error_and_exit('The options --algo/-a and --solve are incompatible')
+            error_and_exit('The options --algo/-a and --solve are incompatible with each other')
+        if args.search:
+            error_and_exit('The options --algo/-a and --search are incompatible with each other')
         if not cube_pattern.is_cube():
             error_and_exit('Cannot apply an algorithm to a cube pattern with wildcards, please provide a well-defined cube position')
         try:
@@ -632,6 +641,12 @@ def main():
         except ValueError as e:
             error_and_exit('Invalid cube pattern: ' + str(e))
         cube = algo.apply(cube_pattern.to_cube())
+        cube.rich_print()
+        return
+
+    # Print information about the cube position
+    if not args.solve and not args.search and cube_pattern.is_cube():
+        cube = cube_pattern.to_cube()
         cube.rich_print()
         return
 

@@ -8,22 +8,21 @@ Algorithm Finder for the 2x2x2 Rubik's Cube
 
 ```
 $ python rubik2x2.py --help
-usage: rubik2x2.py [-h] [--doc] [--show-colors] [--solve] [--max MAX] [--maxmax] [-c CUBE] [-p PIVOT_CORNER] [-a ALGORITHM]
+usage: rubik2x2.py [-h] [--doc] [--show-colors] [--solve] [--search] [--max MAX] [--maxmax] [-c CUBE] [-p PIVOT] [-a ALGO]
 
 Find algorithms for the 2x2x2 Rubik's cube.
 
 options:
-  -h, --help            show this help message and exit
-  --doc                 Additional documentation
-  --show-colors         Show the association of faces to colors then exit
-  --solve               Solve the cube from the position defined with -c/--cube
-  --max MAX             Max search depth. (Default: 10)
-  --maxmax              Always go to max search depth
-  -c, --cube CUBE       A configuration of the cube. Read the doc with --doc.
-  -p, --pivot PIVOT_CORNER
-                        The pivot corner is to remain fixed. (Default: LDB)
-  -a, --algo ALGORITHM  Apply an algorithm to the cube. For example: "R U2 R'"
-
+  -h, --help           show this help message and exit
+  --doc                Additional documentation
+  --show-colors        Show the association of faces to colors then exit
+  --solve              Solve the cube from the position defined by -c/--cube
+  --search             Search algorithms that match the cube pattern defined by-c/--cube
+  --max MAX            Max search depth. (Default: 10)
+  --maxmax             Always go to the max search depth
+  -c, --cube CUBE      A configuration, or pattern, of the cube. Read the doc with --doc.
+  -p, --pivot PIVOT    The pivot corner is to remain fixed. (Default: LDB)
+  -a, --algo ALGO      Apply an algorithm to the cube. For example: "R U2 R'"
 ```
 
 ## Tutorial
