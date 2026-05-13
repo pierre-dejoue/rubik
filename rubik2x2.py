@@ -39,8 +39,10 @@ config = configparser.ConfigParser()
 config.read(DEFAULT_CONFIG_FILE)
 
 
-def error_and_exit(msg):
-    print('Error: ' + msg, file=sys.stderr)
+def error_and_exit(error_msg: str, farewell_msg: str = ''):
+    print('Error: ' + error_msg, file=sys.stderr)
+    if farewell_msg:
+        print(farewell_msg)
     sys.exit(-1)
 
 
@@ -157,22 +159,29 @@ class Cube:
         assert sum(map(len, cycles)) == 8
         return cycles
 
-    def is_solvable(self, pivot):
+    def is_solvable(self, pivot: str) -> bool:
         idx = CornerPosition.from_string(pivot)
         pivot_is_fixed = self.permutation[idx] == idx and self.orientations[idx] == 0
         orientation_is_zero = self.orientation() == 0
         return pivot_is_fixed and orientation_is_zero
 
-    def fixed_corners(self):
-        fixed_position = []
-        fixed_position_n_orientation = []
-        for idx in range(8):
-            if self.permutation[idx] == idx:
-                if self.orientations[idx] != 0:
-                    fixed_position.append(idx)
-                else:
-                    fixed_position_n_orientation.append(idx)
-        return fixed_position, fixed_position_n_orientation
+    def fixed_corners(self) -> tuple[list[int], list[int]]:
+        fixed_position = [idx for idx in range(8) if self.permutation[idx] == idx]
+        fixed_position_not_orientation = [idx for idx in fixed_position if self.orientations[idx] != 0]
+        fixed_position_and_orientation = [idx for idx in fixed_position if self.orientations[idx] == 0]
+        return fixed_position_not_orientation, fixed_position_and_orientation
+
+    def rich_print(self) -> None:
+        print(self)
+        fixed_corners = ['-'] * 8
+        fixed_position_not_orientation, fixed_position_and_orientation = self.fixed_corners()
+        for idx in fixed_position_not_orientation:
+            fixed_corners[idx] = '~'
+        for idx in fixed_position_and_orientation:
+            fixed_corners[idx] = '+'
+        print(''.join(fixed_corners))
+        perm_cycles = _get_perm_cycles_str(self.permutation_cycles())
+        print(f'perm_cycles: {perm_cycles}')
 
     def __eq__(self, other):
         return self.permutation == other.permutation and self.orientations == other.orientations
@@ -236,16 +245,16 @@ class CubePattern:
         return Cube(list(map(int, self.permutation)), list(map(int, self.orientations)))
 
     def check_parity(self) -> bool:
-        if self.wildcard in self.orientations:
+        if not self.is_cube():
             return True
         return self.to_cube().orientation() == 0
 
-    def is_solvable(self, pivot):
+    def is_solvable(self, pivot: str) -> bool:
         if self.is_cube():
             return self.to_cube().is_solvable(pivot)
-        idx = CornerPosition.from_string(pivot)
-        pivot_is_fixed = (self.permutation[idx] in [str(idx), self.wildcard] and
-                          self.orientations[idx] in ['0', self.wildcard])
+        pivot_idx = CornerPosition.from_string(pivot)
+        pivot_is_fixed = (self.permutation[pivot_idx] in [str(pivot_idx), self.wildcard] and
+                          self.orientations[pivot_idx] in ['0', self.wildcard])
         return pivot_is_fixed
 
     @classmethod
@@ -458,7 +467,7 @@ class Algorithm:
         return result
 
 
-def rotations_from_pivot(pivot: str):
+def rotations_from_pivot(pivot: str) -> list[Rot]:
     """List the allowed base rotations for this pivot corner
 
     E.g. if the pivot is LUF, then only the rotations R, D and B can be used
@@ -541,6 +550,9 @@ def corner_to_colors(corner: str, colors: dict[str, str]):
     return f'{colors[corner[0]]}-{colors[corner[1]]}-{colors[corner[2]]}'
 
 
+def _process_found_solution(state: Cube, rotations: Algorithm):
+    print(f'{state} {len(rotations)} [ {str(rotations)} ]', flush=True)
+
 #
 # Main
 #
@@ -555,7 +567,7 @@ def main():
     parser.add_argument('--max', dest='max', type=int, required=False, default=DEFAULT_MAX_DEPTH,
                         help=f'Max search depth. (Default: {DEFAULT_MAX_DEPTH})')
     parser.add_argument('--maxmax', dest='goto_max_depth', action='store_true',
-                        help='Always go to max search depth')
+                        help='Always go to the max search depth')
     parser.add_argument('-c', '--cube', dest='cube', required=False, default=str(Cube.solved()),
                         help='A configuration of the cube. Read the doc with --doc.')
     parser.add_argument('-p', '--pivot', dest='pivot_corner', required=False, default=CornerPosition.default_pivot,
@@ -577,6 +589,7 @@ def main():
             error_and_exit(f'The documentation file was not found: {doc_filepath}')
         return
 
+    # Read the face colors from the configuration (optional)
     face_colors = get_face_colors_from_config()
     if args.show_colors:
         if face_colors:
@@ -592,52 +605,55 @@ def main():
             print(f'No color configuration found, check {DEFAULT_CONFIG_FILE}')
         return
 
-    if args.algorithm is not None:      # Empty string: The transformation is the identity
-        algo = Algorithm.from_string(args.algorithm)
-        starting_cube = Cube.from_string(args.cube)
-        cube = algo.apply(starting_cube)
-        print(cube)
-        fixed_corners = ['-'] * 8
-        fixed_position, fixed_position_n_orientation = cube.fixed_corners()
-        for idx in fixed_position:
-            fixed_corners[idx] = '~'
-        for idx in fixed_position_n_orientation:
-            fixed_corners[idx] = '+'
-        print(''.join(fixed_corners))
-        perm_cycles = _get_perm_cycles_str(cube.permutation_cycles())
-        print(f'perm_cycles: {perm_cycles}')
-        print(f'cyclic_order: {algo.cyclic_order()}')
-        return
-
+    # Read the cube pattern
     if not CubePattern.is_valid_string(args.cube):
         error_and_exit(f'Invalid cube pattern: {args.cube}')
-    target_pattern = CubePattern.from_string(args.cube)
+    cube_pattern = CubePattern.from_string(args.cube)
 
+    # Apply an algorithm (e.g. "L U") on the cube passed as argument (--cube/-c)
+    if args.algorithm is not None:      # Empty string: The transformation is the identity
+        if args.solve:
+            error_and_exit('The options --algo/-a and --solve are incompatible')
+        if not cube_pattern.is_cube():
+            error_and_exit('Cannot apply an algorithm to a cube pattern with wildcards, please provide a well-defined cube position')
+        algo = Algorithm.from_string(args.algorithm)
+        cube = algo.apply(cube_pattern.to_cube())
+        cube.rich_print()
+        print(f'algo.cyclic_order: {algo.cyclic_order()}')
+        return
+
+    # Cube pattern (sanity checks)
+    if args.solve and not cube_pattern.is_cube():
+        error_and_exit('Cannot solve a cube pattern with wildcards, please provide a well-defined cube position')
+    if not cube_pattern.check_parity():
+        extra_msg = ' and cannot be solved' if args.solve else ''
+        error_and_exit(f'The cube pattern [{cube_pattern}] has the wrong parity{extra_msg}')
+
+    # Pivot (sanity checks)
     pivot = args.pivot_corner
+    suggested_pivot_msg = ''
+    if cube_pattern.is_cube():
+        _, fixed_position_and_orientation = cube_pattern.to_cube().fixed_corners()
+        possible_pivots = list(map(CornerPosition.to_string, fixed_position_and_orientation))
+        if len(possible_pivots) == 0:
+            error_and_exit('No pivot identified. The cube pattern must have at least one fixed corner.')
+        suggested_pivot_msg = f'Possible pivots for this cube pattern: {possible_pivots}'
     if not CornerPosition.is_valid_string(pivot):
-        error_and_exit(f'Invalid pivot [{pivot}]. Pivot must follow this format: (L|R)(D|U)(B|F)')
-    pivot_str = f'{pivot} ({CornerPosition.from_string(pivot)})'
+        error_and_exit(f'Invalid pivot [{pivot}]. Pivot must follow this format: (L|R)(D|U)(B|F)', suggested_pivot_msg)
+    pivot_id = CornerPosition.from_string(pivot)
+    if not cube_pattern.is_solvable(pivot):
+        error_and_exit(f'The target pattern [{cube_pattern}] cannot be obtained with pivot {pivot} ({pivot_id})', suggested_pivot_msg)
+    pivot_descr = f'{pivot} ({pivot_id})'
     if face_colors:
-        pivot_str += f' {corner_to_colors(pivot, face_colors)}'
-    print(f'Pivot: {pivot_str}')
+        pivot_descr += f' {corner_to_colors(pivot, face_colors)}'
+    print(f'Pivot: {pivot_descr}')
 
-    if not target_pattern.check_parity():
-        error_and_exit(f'The target pattern [{target_pattern}] has wrong parity')
-    if not target_pattern.is_solvable(pivot):
-        error_and_exit(f'The target pattern [{target_pattern}] cannot be obtained with pivot {pivot} ({CornerPosition.from_string(pivot)})')
-
-    allowed_rotations = rotations_from_pivot(args.pivot_corner)
-
-    def process_solution(state: Cube, rotations: Algorithm):
-        print(f'{state} {len(rotations)} [ {str(rotations)} ]', flush=True)
-
+    # Explore the solutions
+    allowed_rotations = rotations_from_pivot(pivot)
     if args.solve:
-        if not target_pattern.is_cube():
-            error_and_exit('Cannot solve a cube pattern, please provide a well-defined cube position as the target')
-        solution_explorer = CubeSolver(allowed_rotations, process_solution, target_pattern.to_cube())
+        solution_explorer = CubeSolver(allowed_rotations, _process_found_solution, cube_pattern.to_cube())
     else:
-        solution_explorer = ExploreSolutions(allowed_rotations, process_solution, target_pattern.match)
-
+        solution_explorer = ExploreSolutions(allowed_rotations, _process_found_solution, cube_pattern.match)
     found = False
     depth = 1
     while (args.goto_max_depth or not found) and depth <= args.max:

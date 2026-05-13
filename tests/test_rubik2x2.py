@@ -3,7 +3,8 @@ Unit tests of the rubik2x2 module
 """
 import unittest
 
-from rubik2x2 import Algorithm, CWQuarterRot, cw_quarter_rotation_to_string, RepeatRot
+from rubik2x2 import (Algorithm, CWQuarterRot, RepeatRot,
+                      cw_quarter_rotation_to_string, rotations_from_pivot)
 
 
 class TestCWQuarterRot(unittest.TestCase):
@@ -58,6 +59,7 @@ class TestAlgorithm(unittest.TestCase):
 
     def test_apply(self):
         self.assertEqual(repr(Algorithm().apply()),                        "01234567:00000000")
+        self.assertEqual(repr(Algorithm.from_string("I").apply()),         "01234567:00000000")
         self.assertEqual(repr(Algorithm.from_string("F").apply()),         "01237456:00002121")
         self.assertEqual(repr(Algorithm.from_string("R F").apply()),       "04137526:02202111")
         self.assertEqual(repr(Algorithm.from_string("R B").apply()),       "15204637:11120220")
@@ -67,6 +69,7 @@ class TestAlgorithm(unittest.TestCase):
 
     def test_cyclic_order(self):
         self.assertEqual(Algorithm().cyclic_order(),                        1)
+        self.assertEqual(Algorithm.from_string("I" ).cyclic_order(),        1)
         self.assertEqual(Algorithm.from_string("R" ).cyclic_order(),        4)
         self.assertEqual(Algorithm.from_string("R2").cyclic_order(),        2)
         self.assertEqual(Algorithm.from_string("X" ).cyclic_order(),        4)
@@ -88,6 +91,18 @@ class TestAlgorithm(unittest.TestCase):
         self.assertEqual(algo_to_cycle_lengths("B D B L D"), [6, 1, 1])
         self.assertEqual(algo_to_cycle_lengths("B D B R D"), [4, 3, 1])
 
+    def test_cube_fixed_corners(self):
+        test_cases = [
+            ("R U",         [6],    [0, 4]),
+            ("D'",          [],     [2, 3, 6, 7]),
+            ("B D B L D",   [0],    [6] )
+        ]
+        for algo_str, expected_fixed_pos_not_ori, expected_fixed_pos_and_ori in test_cases:
+            with self.subTest(algo=algo_str):
+                fixed_pos_not_ori, fixed_pos_and_ori = Algorithm.from_string(algo_str).apply().fixed_corners()
+                self.assertEqual(fixed_pos_not_ori, expected_fixed_pos_not_ori)
+                self.assertEqual(fixed_pos_and_ori, expected_fixed_pos_and_ori)
+
     def test_repr(self):
         self.assertEqual(repr(Algorithm()),                           "")
         self.assertEqual(repr(Algorithm.from_string("F")),            "F")
@@ -99,6 +114,14 @@ class TestAlgorithm(unittest.TestCase):
         self.assertEqual(str(Algorithm.from_string("F")),             "F")
         self.assertEqual(str(Algorithm.from_string("R B")),           "R B")
         self.assertEqual(str(Algorithm.from_string("B D2 B' L3 I")),  "B D2 B' L'")
+
+
+class TestModuleFunctions(unittest.TestCase):
+    """Test functions at the module level"""
+
+    def test_rotations_from_pivot(self):
+        self.assertEqual(set(map(lambda r : r.name, rotations_from_pivot('LUF'))), { 'R', 'D', 'B' })
+        self.assertEqual(set(map(lambda r : r.name, rotations_from_pivot('RDB'))), { 'L', 'U', 'F' })
 
 
 if __name__ == '__main__':
