@@ -455,7 +455,7 @@ class Algorithm:
     """An algorithm is a list of rotations applied to the cube"""
 
     def __init__(self):
-        self.rotations = []
+        self.rotations: list[RepeatRot] = []
 
     def append(self, rotation: RepeatRot):
         if rotation.repeat > 0:
@@ -558,7 +558,7 @@ class CubeSolver(ExploreSolutions):
     """Solve the cube from a given position"""
     def __init__(self, allowed_rotations, on_result_found, target: Cube):
         super().__init__(allowed_rotations, on_result_found, lambda c : c.is_solved())
-        self.target = target
+        self.target = copy.deepcopy(target)
 
     @override
     def dfs_exploration(self, max_depth: int) -> bool:

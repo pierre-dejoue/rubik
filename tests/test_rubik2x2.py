@@ -3,7 +3,7 @@ Unit tests of the rubik2x2 module
 """
 import unittest
 
-from rubik2x2 import (Algorithm, Cube, CWQuarterRot, RepeatRot,
+from rubik2x2 import (Algorithm, Cube, CWQuarterRot, RepeatRot, CubeSolver,
                       cw_quarter_rotation_to_string, rotations_from_pivot)
 
 
@@ -146,6 +146,27 @@ class TestModuleFunctions(unittest.TestCase):
     def test_rotations_from_pivot(self):
         self.assertEqual(set(map(lambda r : r.name, rotations_from_pivot('LUF'))), { 'R', 'D', 'B' })
         self.assertEqual(set(map(lambda r : r.name, rotations_from_pivot('RDB'))), { 'L', 'U', 'F' })
+
+
+class TestExploreSolutions(unittest.TestCase):
+    """Test classes ExploreSolutions and CubeSolver"""
+
+    def test_cube_solver(self):
+        test_cases = [
+        #    scramble_algo, pivot,  search_depth,   expected_found, expected_algos, expected_algo_len
+            ("R U",         'LDB',  1,              False,          0,              0),
+            ("R U",         'LDB',  2,              True,           1,              2),
+            ("R U",         'LDB',  3,              True,           1,              2),
+        ]
+        for scramble_algo, pivot, search_depth, expected_found, expected_algos, expected_algo_len in test_cases:
+            with self.subTest(depth = search_depth):
+                cube_to_solve = Algorithm.from_string(scramble_algo).apply()
+                found_algos = []
+                solver = CubeSolver(rotations_from_pivot(pivot), lambda _, a: found_algos.append(a), cube_to_solve)
+                self.assertEqual(solver.dfs_exploration(search_depth), expected_found)
+                self.assertEqual(len(found_algos), expected_algos)
+                for algo in found_algos:
+                    self.assertEqual(len(algo), expected_algo_len)
 
 
 if __name__ == '__main__':
