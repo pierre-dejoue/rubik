@@ -7,23 +7,30 @@ Algorithm Finder for the 2x2x2 Rubik's Cube
 ## Usage
 
 ```
-$ python rubik2x2.py -h
-usage: rubik2x2.py [-h] [--doc] [--show-colors] [--solve] [--search] [--max MAX] [--maxmax] [-c CUBE] [-p PIVOT] [-a ALGO] [-r N]
+$ python rubik2x2.py --help
+usage: rubik2x2.py [-h] [--doc] [--show-colors] [--max MAX] [--maxmax] [-c CUBE] [-a ALGO] [-r N] [-p PIVOT] [--info | --solve | --search]
 
 Find algorithms for the 2x2x2 Rubik's cube.
+
+Features:
+ - Describe a cube configuration by a set of moves (--algo) or a static state (--cube)
+ - Analyze the cube confguration with --info
+ - Find algorithms that match a cube pattern with --search
+ - Solve the cube with --solve
 
 options:
   -h, --help           show this help message and exit
   --doc                Additional documentation
   --show-colors        Show the association of faces to colors then exit
-  --solve              Solve the cube from the position defined by -c/--cube
-  --search             Search algorithms that match the cube pattern defined by-c/--cube
   --max MAX            Max search depth. (Default: 10)
   --maxmax             Always go to the max search depth
   -c, --cube CUBE      A configuration, or pattern, of the cube. Read the doc with --doc.
-  -p, --pivot PIVOT    The pivot corner is to remain fixed. (Default: LDB)
   -a, --algo ALGO      Apply an algorithm to the cube. For example: "R U2 R'"
   -r, --algo-repeat N  Repeat the algorithm N times
+  -p, --pivot PIVOT    The pivot corner is to remain fixed. (Default: LDB)
+  --info               Analyze the cube configuration. (Default action of the script.)
+  --solve              Solve the cube
+  --search             Search algorithms that match the cube pattern
 ```
 
 ## Tutorial
@@ -32,7 +39,7 @@ options:
 
 #### Move Notation
 
-We're using the standard convention to name the cube faces and rotations. Those are sometimes refered to as the Singmaster notations. We provide a quick summary below:
+We're using the standard convention to name the cube faces and rotations. That is sometimes refered to as the Singmaster notation. We provide a quick summary below:
 
 The six faces of the Rubik's cube are named:
 
@@ -59,15 +66,15 @@ The name of each face is also used to designate a clockwise quarter rotation of 
 
 This schema is adapted from the content of website [myrubik.com](https://myrubik.com/), shared under [CC BY-NC](https://creativecommons.org/licenses/by-nc/4.0/) license.
 
-Read more about the move Singmaster notation of the Rubik's cube on [myrubik.com -- The 2x2x2 cube pieces and notation](https://myrubik.com/en/notation/2x2x2), and [rubiks.fandom.com -- Notation](https://rubiks.fandom.com/wiki/Notation)
+Read more about Singmaster's move notation of the Rubik's cube on [myrubik.com -- The 2x2x2 cube pieces and notation](https://myrubik.com/en/notation/2x2x2), and [rubiks.fandom.com -- Notation](https://rubiks.fandom.com/wiki/Notation).
 
 #### Static Notation
 
-The script is using a custom notation to capture any position of the 2x2 cube (including [illegal positions not reachable from the solved state](https://www.speedcubing.com/chris/legal.html))
+The script is using a custom notation to capture any position of the 2x2x2 cube (including [illegal positions not reachable from the solved state](https://www.speedcubing.com/chris/legal.html))
 
 That notation is documented [in details here](./doc/cube_static_notation.md), and below is a quick reference sheet:
 
-- The position of the corners is the following:
+- The corners are enumerated in the following order:
 
 ![static position notation: Corner position](doc/img/cube_positions.png)
 
@@ -77,9 +84,9 @@ That notation is documented [in details here](./doc/cube_static_notation.md), an
 
 ## Color Scheme
 
-An optional `config.ini` can be provided to set a color scheme.
+An optional `config.ini` file can be provided to set a color scheme.
 
-Examples of config files are given for the most common color schemes: [./config/config_japanese.ini](./config/config_japanese.ini),  [./config/config_western.ini](./config/config_western.ini)
+Examples of config files are given for the most common color schemes: [./config/config_japanese.ini](./config/config_japanese.ini), [./config/config_western.ini](./config/config_western.ini)
 
 Option `--show-colors` of the script prints out the current color scheme:
 

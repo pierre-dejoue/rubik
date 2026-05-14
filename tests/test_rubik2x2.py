@@ -57,11 +57,14 @@ class TestRepeatRot(unittest.TestCase):
 class TestCube(unittest.TestCase):
     """Test the Cube class"""
 
-    # An example of a cube configuration, without a pivot, with the theoretical maximum cyclic_order
-    CUBE_MAX_CYCLE_ORDER = '45126703:01200210'
+    # An example of a cube configuration, without a pivot, with the theoretical maximum cyclic_order 45 (=3*5*3)
+    CUBE_CYCLIC_ORDER_45 = '45126703:01200210'
 
-    # An example of a cube configuration, with a pivot, with the theoretical maximum cyclic_order
-    CUBE_W_PIVOT_MAX_CYCLE_ORDER = '05126743:01200210'
+    # An example of a cube configuration, with a pivot, and the max theoretical cyclic_order 36 (=3*4*3)
+    CUBE_CYCLIC_ORDER_36 = '12035674:10002000'
+
+    # An example of a cube configuration, with a pivot, with cyclic_order 30 (=3*5*2)
+    CUBE_CYCLIC_ORDER_30 = '05126743:01200210'
 
     def test_init(self):
         self.assertEqual(repr(Cube.solved()),                                            "01234567:00000000")
@@ -70,12 +73,14 @@ class TestCube(unittest.TestCase):
     def test_permutation_cycles(self):
         def static_position_to_cycles(cube_str: str) -> list[set[int]]:
             return list(map(set, Cube.from_string(cube_str).permutation_cycles()))
-        self.assertEqual(static_position_to_cycles(self.CUBE_MAX_CYCLE_ORDER),         [{1, 2, 3, 5, 7}, {0, 4, 6}])
-        self.assertEqual(static_position_to_cycles(self.CUBE_W_PIVOT_MAX_CYCLE_ORDER), [{1, 2, 3, 5, 7}, {4, 6}, {0}])
+        self.assertEqual(static_position_to_cycles(self.CUBE_CYCLIC_ORDER_45), [{1, 2, 3, 5, 7}, {0, 4, 6}])
+        self.assertEqual(static_position_to_cycles(self.CUBE_CYCLIC_ORDER_36), [{4, 5, 6, 7}, {0, 1, 2}, {3}])
+        self.assertEqual(static_position_to_cycles(self.CUBE_CYCLIC_ORDER_30), [{1, 2, 3, 5, 7}, {4, 6}, {0}])
 
     def test_cyclic_order(self):
-        self.assertEqual(Cube.from_string(self.CUBE_MAX_CYCLE_ORDER        ).cyclic_order(), 45)
-        self.assertEqual(Cube.from_string(self.CUBE_W_PIVOT_MAX_CYCLE_ORDER).cyclic_order(), 30)
+        self.assertEqual(Cube.from_string(self.CUBE_CYCLIC_ORDER_45).cyclic_order(), 45)
+        self.assertEqual(Cube.from_string(self.CUBE_CYCLIC_ORDER_36).cyclic_order(), 36)
+        self.assertEqual(Cube.from_string(self.CUBE_CYCLIC_ORDER_30).cyclic_order(), 30)
 
 
 class TestAlgorithm(unittest.TestCase):

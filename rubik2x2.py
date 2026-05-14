@@ -1,6 +1,12 @@
 #!/usr/bin/env python
 """
 Find algorithms for the 2x2x2 Rubik's cube.
+
+Features:
+ - Describe a cube configuration by a set of moves (--algo) or a static state (--cube)
+ - Analyze the cube confguration with --info
+ - Find algorithms that match a cube pattern with --search
+ - Solve the cube with --solve
 """
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2022 Pierre DEJOUE
@@ -12,7 +18,7 @@ import copy
 import re
 import sys
 from types import SimpleNamespace
-from typing import override
+from typing import override, Callable
 
 
 DEFAULT_CONFIG_FILE = 'config.ini'
@@ -35,6 +41,8 @@ CORNERS_IN_ORDER = [
     'RUF',
     'LUF',
 ]
+
+INDENT = 4*' '
 
 config = configparser.ConfigParser()
 config.read(DEFAULT_CONFIG_FILE)
@@ -144,7 +152,7 @@ class Cube:
     def orientation_class(self) -> int:
         """Return the orientation class of the cube (0, 1 or 2)
 
-        There exist three equivalence classes of the 2x2x2 cobe, only dependent on the orientations
+        There exists three equivalence classes of the 2x2x2 cube, only dependent on the orientation
         of the corners. Two cubes belong to the same class if the sum of the orientation of their
         respective corners are equal modulo 3. If that is the case, it is possible to transform the
         cube between those two configurations using only legal moves. Otherwise, it is impossible.
@@ -224,8 +232,8 @@ class Cube:
     def __eq__(self, other):
         return self.permutation == other.permutation and self.orientations == other.orientations
 
-    def __ne__(self, other):
-        return not self == other
+    def match(self, cube: Cube) -> bool:
+        return self == cube
 
     @classmethod
     def is_valid_string(cls, cube_str: str) -> bool:
@@ -268,14 +276,14 @@ class CubePattern:
     def __repr__(self):
         return _get_static_repr_str(''.join(self.permutation), ''.join(self.orientations))
 
-    def match(self, cube: Cube):
+    def match(self, cube: Cube) -> bool:
         match_perm = all(pattern == self.wildcard or pattern == str(perm)
                             for (perm, pattern) in zip(cube.permutation, self.permutation))
         match_orient = all(pattern == self.wildcard or pattern == str(orient)
                             for (orient, pattern) in zip(cube.orientations, self.orientations))
         return match_perm and match_orient
 
-    def is_cube(self):
+    def is_cube(self) -> bool:
         return self.wildcard not in self.permutation and self.wildcard not in self.orientations
 
     def to_cube(self) -> Cube:
@@ -307,7 +315,7 @@ class CubePattern:
         return True
 
     @classmethod
-    def from_string(cls, pattern_str: str) -> 'CubePattern':
+    def from_string(cls, pattern_str: str) -> CubePattern:
         assert cls.is_valid_string(pattern_str)
         lists = pattern_str.split(REPR_SEP)
         perm = list(lists[0])
@@ -464,11 +472,14 @@ class Algorithm:
     def apply(self, cube: Cube | None = None, repeat: int = 1) -> Cube:
         if cube is None:
             cube = Cube.solved()
-        repeat = max(repeat, 1)
+        if repeat <= 0:
+            return cube
+        # First iteration of the algorithm
         algo_cube = copy.deepcopy(cube)
         for rr in self.rotations:
             for _ in range(rr.repeat):
                 algo_cube = rr.rot.apply(algo_cube)
+        # Repeated iterations, if any
         repeat_algo_cube = copy.deepcopy(algo_cube)
         while repeat > 1:
             repeat_algo_cube = algo_cube.apply(repeat_algo_cube)
@@ -525,7 +536,9 @@ class ExploreSolutions:
      - Do not rotate on the same axis as the caller
      - Check clockwise, counter-clockwise, half-turn on the two remaining axis
     """
-    def __init__(self, allowed_rotations, on_result_found, result_found_predicate):
+    def __init__(self, allowed_rotations: list[Rot],
+                 on_result_found: Callable[[Cube, Algorithm], None],
+                 result_found_predicate: Callable[[Cube], bool]):
         self.allowed_rotations = allowed_rotations
         self.on_result_found = on_result_found
         self.result_found_predicate = result_found_predicate
@@ -556,13 +569,13 @@ class ExploreSolutions:
 
 class CubeSolver(ExploreSolutions):
     """Solve the cube from a given position"""
-    def __init__(self, allowed_rotations, on_result_found, target: Cube):
+    def __init__(self, allowed_rotations: list[Rot], on_result_found: Callable[[Cube, Algorithm], None], start_cube: Cube):
         super().__init__(allowed_rotations, on_result_found, lambda c : c.is_solved())
-        self.target = copy.deepcopy(target)
+        self.start_cube = copy.deepcopy(start_cube)
 
     @override
     def dfs_exploration(self, max_depth: int) -> bool:
-        return self._recursive_dfs_exploration(max_depth, self.target)
+        return self._recursive_dfs_exploration(max_depth, self.start_cube)
 
 
 def funny_hint(depth: int) -> str:
@@ -586,6 +599,20 @@ def corner_to_colors(corner: str, colors: dict[str, str]):
     return f'{colors[corner[0]]}-{colors[corner[1]]}-{colors[corner[2]]}'
 
 
+def _printout_face_colors(face_colors: dict[str, str]):
+    if face_colors:
+        print()
+        print('Faces:')
+        for face in ALL_FACES:
+            print(f'{INDENT}{face}: {face_colors[face]}')
+        print()
+        print('Corners:')
+        for idx, corner in enumerate(CORNERS_IN_ORDER):
+            print(f'{INDENT}{idx} ({corner}): {corner_to_colors(corner, face_colors)}')
+    else:
+        print(f'No color configuration found, check {DEFAULT_CONFIG_FILE}')
+
+
 def _process_found_solution(state: Cube, rotations: Algorithm):
     print(f'{state} {len(rotations)} [ {str(rotations)} ]', flush=True)
 
@@ -593,37 +620,41 @@ def _process_found_solution(state: Cube, rotations: Algorithm):
 # Main
 #
 def main():
-    parser = argparse.ArgumentParser(description=__doc__)
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--doc', dest='documentation', action='store_true',
                         help='Additional documentation')
     parser.add_argument('--show-colors', dest='show_colors', action='store_true',
                         help='Show the association of faces to colors then exit')
-    parser.add_argument('--solve', dest='solve', action='store_true',
-                        help='Solve the cube from the position defined by -c/--cube')
-    parser.add_argument('--search', dest='search', action='store_true',
-                        help='Search algorithms that match the cube pattern defined by-c/--cube')
     parser.add_argument('--max', dest='max', type=int, required=False, default=DEFAULT_MAX_DEPTH,
                         help=f'Max search depth. (Default: {DEFAULT_MAX_DEPTH})')
     parser.add_argument('--maxmax', dest='goto_max_depth', action='store_true',
                         help='Always go to the max search depth')
     parser.add_argument('-c', '--cube', dest='cube', required=False, default=str(Cube.solved()),
                         help='A configuration, or pattern, of the cube. Read the doc with --doc.')
-    parser.add_argument('-p', '--pivot', dest='pivot_corner', required=False, default=CornerPosition.default_pivot, metavar='PIVOT',
-                        help=f'The pivot corner is to remain fixed. (Default: {CornerPosition.default_pivot})')
     parser.add_argument('-a', '--algo', dest='algorithm', required=False, default=None, metavar='ALGO',
                         help='Apply an algorithm to the cube. For example: "R U2 R\'"')
     parser.add_argument('-r', '--algo-repeat', dest='algorithm_repeat', type=int, required=False, metavar='N', default=1,
                         help='Repeat the algorithm N times')
+    parser.add_argument('-p', '--pivot', dest='pivot_corner', required=False, default=CornerPosition.default_pivot, metavar='PIVOT',
+                        help=f'The pivot corner is to remain fixed. (Default: {CornerPosition.default_pivot})')
+    action_group = parser.add_mutually_exclusive_group()
+    action_group.add_argument('--info', dest='info', action='store_true',
+                        help='Analyze the cube configuration. (Default action of the script.)')
+    action_group.add_argument('--solve', dest='solve', action='store_true',
+                        help='Solve the cube')
+    action_group.add_argument('--search', dest='search', action='store_true',
+                        help='Search algorithms that match the cube pattern')
+
     args = parser.parse_args()
 
-    indent = 4*' '
+    # Display the doc
     if args.documentation:
         try:
             doc_filepath = ADDITIONAL_DOCUMENTATION
             with open(doc_filepath, 'r', encoding='utf-8') as fp:
                 print('\n')
                 for line in fp:
-                    print(f'{indent}{line.rstrip()}')
+                    print(f'{INDENT}{line.rstrip()}')
                 print('\n')
         except FileNotFoundError:
             error_and_exit(f'The documentation file was not found: {doc_filepath}')
@@ -632,61 +663,51 @@ def main():
     # Read the face colors from the configuration (optional)
     face_colors = get_face_colors_from_config()
     if args.show_colors:
-        if face_colors:
-            print()
-            print('Faces:')
-            for face in ALL_FACES:
-                print(f'{indent}{face}: {face_colors[face]}')
-            print()
-            print('Corners:')
-            for idx, corner in enumerate(CORNERS_IN_ORDER):
-                print(f'{indent}{idx} ({corner}): {corner_to_colors(corner, face_colors)}')
-        else:
-            print(f'No color configuration found, check {DEFAULT_CONFIG_FILE}')
+        _printout_face_colors(face_colors)
         return
 
-    if args.solve and args.search:
-        error_and_exit('The options --search and --solve are incompatible with each other')
+    # By default, display the info regarding the cube configuration defined by --cube and --algo
+    if not args.solve and not args.search:
+        args.info = True
 
     # Read the cube pattern
     if not CubePattern.is_valid_string(args.cube):
         error_and_exit(f'Invalid cube pattern: {args.cube}')
     cube_pattern = CubePattern.from_string(args.cube)
-
-    # Apply an algorithm (e.g. "L U") on the cube passed as argument (--cube/-c)
+    cube = Cube.solved()
+    if cube_pattern.is_cube():
+        cube = cube_pattern.to_cube()
+    # Apply an algorithm (e.g. "L U") to the cube passed as argument (--cube/-c)
     if args.algorithm is not None:      # Empty string: The transformation is the identity
-        if args.solve:
-            error_and_exit('The options --algo/-a and --solve are incompatible with each other')
-        if args.search:
-            error_and_exit('The options --algo/-a and --search are incompatible with each other')
         if not cube_pattern.is_cube():
             error_and_exit('Cannot apply an algorithm to a cube pattern with wildcards, please provide a well-defined cube position')
         try:
             algo = Algorithm.from_string(args.algorithm)
         except ValueError as e:
             error_and_exit('Invalid cube pattern: ' + str(e))
-        cube = algo.apply(cube_pattern.to_cube(), args.algorithm_repeat)
-        cube.rich_print()
-        return
+        cube = algo.apply(cube, args.algorithm_repeat)
 
-    # Print information about the cube position
-    if not args.solve and not args.search and cube_pattern.is_cube():
-        cube = cube_pattern.to_cube()
-        cube.rich_print()
+    # Print information about the cube position (unless it is a pattern, i.e. it has wildcards characters)
+    if args.info:
+        if cube_pattern.is_cube():
+            cube.rich_print()
+        else:
+            print(cube_pattern)
         return
 
     # Cube pattern (sanity checks)
+    cube_descr = repr(cube) if cube_pattern.is_cube() else repr(cube_pattern)
     if args.solve and not cube_pattern.is_cube():
         error_and_exit('Cannot solve a cube pattern with wildcards, please provide a well-defined cube position')
     if not cube_pattern.check_parity():
-        extra_msg = ' and cannot be solved' if args.solve else ''
-        error_and_exit(f'The cube pattern [{cube_pattern}] has the wrong parity{extra_msg}')
+        extra_msg = ' and cannot be ' + ('solved' if args.solve else 'obtained')
+        error_and_exit(f'The cube pattern [{cube_descr}] has the wrong parity{extra_msg}')
 
     # Pivot (sanity checks)
     pivot = args.pivot_corner
     suggested_pivot_msg = ''
     if cube_pattern.is_cube():
-        _, fixed_position_and_orientation = cube_pattern.to_cube().fixed_corners()
+        _, fixed_position_and_orientation = cube.fixed_corners()
         possible_pivots = list(map(CornerPosition.to_string, fixed_position_and_orientation))
         if len(possible_pivots) == 0:
             error_and_exit('No pivot identified. The cube pattern must have at least one fixed corner.')
@@ -695,7 +716,7 @@ def main():
         error_and_exit(f'Invalid pivot [{pivot}]. Pivot must follow this format: (L|R)(D|U)(B|F)', suggested_pivot_msg)
     pivot_id = CornerPosition.from_string(pivot)
     if not cube_pattern.is_solvable(pivot):
-        error_and_exit(f'The target pattern [{cube_pattern}] cannot be obtained with pivot {pivot} ({pivot_id})', suggested_pivot_msg)
+        error_and_exit(f'The cube configuration [{cube_descr}] cannot be obtained with pivot {pivot} ({pivot_id})', suggested_pivot_msg)
     pivot_descr = f'{pivot} ({pivot_id})'
     if face_colors:
         pivot_descr += f' {corner_to_colors(pivot, face_colors)}'
@@ -703,16 +724,21 @@ def main():
 
     # Explore the solutions
     allowed_rotations = rotations_from_pivot(pivot)
+    solution_explorer: ExploreSolutions
     if args.solve:
-        solution_explorer = CubeSolver(allowed_rotations, _process_found_solution, cube_pattern.to_cube())
+        assert cube_pattern.is_cube()
+        solution_explorer = CubeSolver(allowed_rotations, _process_found_solution,
+                                       cube)
     else:
-        solution_explorer = ExploreSolutions(allowed_rotations, _process_found_solution, cube_pattern.match)
+        assert args.search
+        solution_explorer = ExploreSolutions(allowed_rotations, _process_found_solution,
+                                             cube.match if cube_pattern.is_cube() else cube_pattern.match)
     found = False
     depth = 1
     while (args.goto_max_depth or not found) and depth <= args.max:
         print(f'Recurse depth: {depth} {funny_hint(depth)}', flush=True)
         found = solution_explorer.dfs_exploration(depth)
-        depth = depth + 1
+        depth += 1
 
 
 if __name__ == "__main__":
