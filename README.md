@@ -134,3 +134,9 @@ To this repo we annexed a C++ program that finds the [God's number](https://en.w
 Please read: [cpp/README.md](cpp/README.md)
 
 The convention used to describe a transformation of the cube (position and orientation of the corners) in the C++ project is the same as in the Python script.
+
+# References
+
+This tool was hugely influenced by an article [1] written by mathematician Emmanuel Halberstadt, in the French journal Pour la Science.
+
+- [1] Emmanuel Halberstadt, "Cube hongrois et théorie des groupes", Pour la Science, 1980.
