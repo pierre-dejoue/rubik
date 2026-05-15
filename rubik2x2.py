@@ -3,7 +3,7 @@
 Find algorithms for the 2x2x2 Rubik's cube.
 
 Features:
- - Describe a cube configuration by a set of moves (--algo) or a static state (--cube)
+ - Describe a cube configuration by a set of moves (--algo) or a static position (--cube)
  - Analyze the cube confguration with --info
  - Find algorithms that match a cube pattern with --search
  - Solve the cube with --solve
