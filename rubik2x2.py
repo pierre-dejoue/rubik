@@ -17,6 +17,7 @@ import configparser
 import copy
 import re
 import sys
+import time
 from types import SimpleNamespace
 from typing import override, Callable
 
@@ -733,12 +734,15 @@ def main():
         assert args.search
         solution_explorer = ExploreSolutions(allowed_rotations, _process_found_solution,
                                              cube.match if cube_pattern.is_cube() else cube_pattern.match)
+    start_time = time.time()
     found = False
     depth = 1
     while (args.goto_max_depth or not found) and depth <= args.max:
         print(f'Recurse depth: {depth} {funny_hint(depth)}', flush=True)
         found = solution_explorer.dfs_exploration(depth)
         depth += 1
+    stop_time = time.time()
+    print(f'runtime: {round(stop_time - start_time, 3)} seconds')
 
 
 if __name__ == "__main__":
