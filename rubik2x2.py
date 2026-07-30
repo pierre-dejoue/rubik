@@ -18,9 +18,9 @@ import copy
 import re
 import sys
 import time
+from collections.abc import Callable
 from types import SimpleNamespace
-from typing import override, Callable
-
+from typing import override
 
 DEFAULT_CONFIG_FILE = 'config.ini'
 
@@ -334,7 +334,7 @@ class Rot:
         self.name = name
 
     @classmethod
-    def from_perm(cls, permutation: list, orientations: list, axis: str, name: str) -> 'Rot':
+    def from_perm(cls, permutation: list, orientations: list, axis: str, name: str) -> Rot:
         return cls(Cube(permutation, orientations), axis, name)
 
     @classmethod
@@ -615,7 +615,7 @@ def _printout_face_colors(face_colors: dict[str, str]):
 
 
 def _process_found_solution(state: Cube, rotations: Algorithm):
-    print(f'{state} {len(rotations)} [ {str(rotations)} ]', flush=True)
+    print(f'{state} {len(rotations)} [ {rotations!s} ]', flush=True)
 
 #
 # Main

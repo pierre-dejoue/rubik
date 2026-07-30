@@ -3,8 +3,15 @@ Unit tests of the rubik2x2 module
 """
 import unittest
 
-from rubik2x2 import (Algorithm, Cube, CWQuarterRot, RepeatRot, CubeSolver,
-                      cw_quarter_rotation_to_string, rotations_from_pivot)
+from rubik2x2 import (
+    Algorithm,
+    Cube,
+    CubeSolver,
+    CWQuarterRot,
+    RepeatRot,
+    cw_quarter_rotation_to_string,
+    rotations_from_pivot,
+)
 
 
 class TestCWQuarterRot(unittest.TestCase):
@@ -149,8 +156,8 @@ class TestModuleFunctions(unittest.TestCase):
     """Test functions at the module level"""
 
     def test_rotations_from_pivot(self):
-        self.assertEqual(set(map(lambda r : r.name, rotations_from_pivot('LUF'))), { 'R', 'D', 'B' })
-        self.assertEqual(set(map(lambda r : r.name, rotations_from_pivot('RDB'))), { 'L', 'U', 'F' })
+        self.assertEqual({ r.name for r in rotations_from_pivot('LUF') }, { 'R', 'D', 'B' })
+        self.assertEqual({ r.name for r in rotations_from_pivot('RDB') }, { 'L', 'U', 'F' })
 
 
 class TestExploreSolutions(unittest.TestCase):
